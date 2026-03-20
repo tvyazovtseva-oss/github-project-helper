@@ -167,7 +167,7 @@ export default function MamaHomePage() {
             Все →
           </button>
         </div>
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {feed.map(item => (
             <div
               key={item.id}
