@@ -4,26 +4,32 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
+:root {
+  --product-color: #f43f5e;
+  --product-bg: #fff1f2;
+  --product-light: #ffe4e6;
+}
+
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 222 84% 5%;
+    --background: 0 0% 99%;
+    --foreground: 0 0% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 222 84% 5%;
+    --card-foreground: 0 0% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 84% 5%;
+    --popover-foreground: 0 0% 11%;
     --primary: 347 77% 50%;
     --primary-foreground: 0 0% 100%;
     --secondary: 215 28% 17%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
+    --accent: 240 5% 96%;
+    --accent-foreground: 0 0% 11%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
     --ring: 347 77% 50%;
     --radius: 0.75rem;
     --sidebar-background: 215 28% 17%;
@@ -35,44 +41,75 @@
     --sidebar-border: 215 25% 22%;
     --sidebar-ring: 347 77% 50%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
   }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
   }
 }
 
 @layer utilities {
   .admin-input {
-    @apply w-full p-4 bg-muted border border-border rounded-xl text-sm font-bold outline-none transition-all;
+    @apply w-full p-4 bg-surface-100 border border-surface-200 rounded-xl text-sm font-bold outline-none transition-all duration-200;
   }
   .admin-input:focus {
-    @apply border-foreground bg-card shadow-[0_0_0_4px_rgba(0,0,0,0.05)];
+    @apply border-ink-900 bg-white shadow-[0_0_0_4px_rgba(0,0,0,0.03)];
   }
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
+
+  .input-premium {
+    @apply w-full px-5 py-4 bg-surface-100 border border-surface-300/50 rounded-2xl text-sm font-semibold outline-none transition-all duration-200;
   }
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+  .input-premium:focus {
+    @apply border-brand-500/30 bg-white ring-4 ring-brand-500/5;
   }
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+
+  .btn-primary {
+    @apply w-full py-4 bg-ink-900 text-white rounded-2xl font-bold text-sm tracking-wide transition-all duration-200 active:scale-[0.98];
   }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
+  .btn-primary:hover {
+    @apply bg-black shadow-lg shadow-black/10;
   }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 10px;
+
+  .btn-brand {
+    @apply w-full py-4 rounded-2xl font-bold text-sm text-white tracking-wide transition-all duration-200 active:scale-[0.98];
+    background-color: var(--product-color);
   }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground));
+
+  .glass {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
   }
+
+  .glass-dark {
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  .product-accent { color: var(--product-color); }
+  .product-bg { background-color: var(--product-bg); }
+  .product-bg-solid { background-color: var(--product-color); }
+  .product-border { border-color: var(--product-color); }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
+
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 }
