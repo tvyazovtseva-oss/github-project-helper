@@ -89,7 +89,7 @@ export default function LoginPage() {
         {/* Quick demo access */}
         <div className="mt-10 pt-6 border-t border-surface-200">
           <p className="text-xs text-ink-300 text-center mb-3 font-medium">Демо-доступ</p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <button onClick={() => quickLogin('demo@mama.ru')} className="px-3 py-2.5 bg-surface-50 rounded-xl text-xs font-bold text-ink-500 hover:bg-surface-100 transition-all active:scale-[0.97]">
               👩 Мама
             </button>
@@ -98,9 +98,6 @@ export default function LoginPage() {
             </button>
             <button onClick={() => quickLogin('admin@anna.ru')} className="px-3 py-2.5 bg-surface-50 rounded-xl text-xs font-bold text-ink-500 hover:bg-surface-100 transition-all active:scale-[0.97]">
               ⚙️ Админ
-            </button>
-            <button onClick={() => quickLogin('support@anna.ru')} className="px-3 py-2.5 bg-surface-50 rounded-xl text-xs font-bold text-ink-500 hover:bg-surface-100 transition-all active:scale-[0.97]">
-              🎧 Поддержка
             </button>
           </div>
         </div>
