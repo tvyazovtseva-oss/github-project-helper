@@ -52,7 +52,6 @@ function AppRoutes() {
       case 'mama': return '/mama';
       case 'doctor': return '/doctor';
       case 'admin': return '/admin';
-      case 'support': return '/support';
       default: return '/login';
     }
   };
