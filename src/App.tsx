@@ -78,10 +78,7 @@ function AppRoutes() {
         <Route index element={<DoctorTicketsPage />} />
       </Route>
 
-      {/* Support Portal */}
-      <Route path="/support" element={<ProtectedRoute><RoleGuard allowedRoles={['support']}><AdminLayout role="admin" /></RoleGuard></ProtectedRoute>}>
-        <Route index element={<DoctorTicketsPage />} />
-      </Route>
+      {/* Admin Portal (also handles support role) */}
 
       {/* Admin Portal */}
       <Route path="/admin" element={<ProtectedRoute><RoleGuard allowedRoles={['admin']}><AdminLayout role="admin" /></RoleGuard></ProtectedRoute>}>

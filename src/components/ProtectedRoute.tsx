@@ -35,7 +35,6 @@ export function RoleGuard({ allowedRoles, children }: { allowedRoles: UserRole[]
     const roleRedirects: Record<string, string> = {
       mama: '/mama',
       doctor: '/doctor',
-      support: '/support',
       admin: '/admin',
     };
     const redirectTo = user ? (roleRedirects[user.role] || '/login') : '/login';
