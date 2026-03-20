@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
-export type UserRole = 'mama' | 'doctor' | 'support' | 'admin';
+export type UserRole = 'mama' | 'doctor' | 'admin';
 
 export interface AppUser {
   id: string;
@@ -21,12 +21,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Demo users for development without Supabase
 const DEMO_USERS: Record<string, AppUser> = {
   'demo@mama.ru': { id: '1', email: 'demo@mama.ru', full_name: 'Демо Мама', role: 'mama' },
   'doctor@anna.ru': { id: '2', email: 'doctor@anna.ru', full_name: 'Доктор Анна', role: 'doctor' },
   'admin@anna.ru': { id: '3', email: 'admin@anna.ru', full_name: 'Администратор', role: 'admin' },
-  'support@anna.ru': { id: '4', email: 'support@anna.ru', full_name: 'Поддержка', role: 'support' },
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -34,7 +32,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check localStorage for persisted session
     const saved = localStorage.getItem('anna_mama_user');
     if (saved) {
       try {
@@ -45,16 +42,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    // Demo bypass
     const demoUser = DEMO_USERS[email.toLowerCase()];
     if (demoUser) {
       setUser(demoUser);
       localStorage.setItem('anna_mama_user', JSON.stringify(demoUser));
       return { success: true };
     }
-
-    // TODO: Replace with Supabase auth when connected
-    return { success: false, error: 'Используйте demo@mama.ru, doctor@anna.ru, admin@anna.ru или support@anna.ru' };
+    return { success: false, error: 'Используйте demo@mama.ru, doctor@anna.ru или admin@anna.ru' };
   }, []);
 
   const register = useCallback(async (name: string, email: string, _password: string) => {

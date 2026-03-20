@@ -105,7 +105,7 @@ export default function MamaHomePage() {
             Полная карта →
           </button>
         </div>
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {HEALTH_SUMMARY.map(item => (
             <button
               key={item.key}
@@ -133,12 +133,12 @@ export default function MamaHomePage() {
             Все →
           </button>
         </div>
-        <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-1">
           {ACTIVE_PRODUCTS.map(p => (
             <button
               key={p.id}
               onClick={() => navigate(`/mama/courses/${p.id}`)}
-              className="shrink-0 w-36 p-4 bg-surface-50 rounded-2xl active:scale-[0.96] transition-transform text-left"
+              className="p-4 bg-surface-50 rounded-2xl active:scale-[0.96] transition-transform text-left"
             >
               <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: p.color + '15' }}>
                 <p.icon className="w-4 h-4" style={{ color: p.color }} />
@@ -167,7 +167,7 @@ export default function MamaHomePage() {
             Все →
           </button>
         </div>
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {feed.map(item => (
             <div
               key={item.id}
