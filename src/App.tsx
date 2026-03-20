@@ -12,8 +12,12 @@ import MamaLayout from "@/layouts/MamaLayout";
 import AdminLayout from "@/layouts/AdminLayout";
 
 import MamaHomePage from "@/pages/mama/MamaHomePage";
+import MamaCoursesPage from "@/pages/mama/MamaCoursesPage";
+import MamaCourseDetailPage from "@/pages/mama/MamaCourseDetailPage";
+import MamaHealthPage from "@/pages/mama/MamaHealthPage";
 import MamaLibraryPage from "@/pages/mama/MamaLibraryPage";
 import MamaChatPage from "@/pages/mama/MamaChatPage";
+import MamaNotificationsPage from "@/pages/mama/MamaNotificationsPage";
 import MamaProfilePage from "@/pages/mama/MamaProfilePage";
 
 import AdminAnalyticsPage from "@/pages/admin/AdminAnalyticsPage";
@@ -61,8 +65,12 @@ function AppRoutes() {
       {/* Mama Portal */}
       <Route path="/mama" element={<ProtectedRoute><RoleGuard allowedRoles={['mama']}><MamaLayout /></RoleGuard></ProtectedRoute>}>
         <Route index element={<MamaHomePage />} />
+        <Route path="courses" element={<MamaCoursesPage />} />
+        <Route path="courses/:id" element={<MamaCourseDetailPage />} />
+        <Route path="health" element={<MamaHealthPage />} />
         <Route path="library" element={<MamaLibraryPage />} />
         <Route path="chat" element={<MamaChatPage />} />
+        <Route path="notifications" element={<MamaNotificationsPage />} />
         <Route path="profile" element={<MamaProfilePage />} />
       </Route>
 
