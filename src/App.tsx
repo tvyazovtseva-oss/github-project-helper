@@ -65,8 +65,12 @@ function AppRoutes() {
       {/* Mama Portal */}
       <Route path="/mama" element={<ProtectedRoute><RoleGuard allowedRoles={['mama']}><MamaLayout /></RoleGuard></ProtectedRoute>}>
         <Route index element={<MamaHomePage />} />
+        <Route path="courses" element={<MamaCoursesPage />} />
+        <Route path="courses/:id" element={<MamaCourseDetailPage />} />
+        <Route path="health" element={<MamaHealthPage />} />
         <Route path="library" element={<MamaLibraryPage />} />
         <Route path="chat" element={<MamaChatPage />} />
+        <Route path="notifications" element={<MamaNotificationsPage />} />
         <Route path="profile" element={<MamaProfilePage />} />
       </Route>
 
