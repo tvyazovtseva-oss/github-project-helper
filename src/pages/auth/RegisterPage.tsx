@@ -1,18 +1,39 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Phone, Send as SendIcon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogTitle,
 } from '@/components/ui/dialog';
 
+// Simple phone mask: allows +, digits, spaces, dashes, parens
+function formatPhone(raw: string): string {
+  // Strip everything except digits and leading +
+  const cleaned = raw.replace(/[^\d+]/g, '');
+  if (!cleaned) return '';
+  // If starts with +7 or 8 (Russian), format nicely
+  if (cleaned.startsWith('+7') && cleaned.length <= 12) {
+    const d = cleaned.slice(2);
+    let result = '+7';
+    if (d.length > 0) result += ' (' + d.slice(0, 3);
+    if (d.length >= 3) result += ') ';
+    if (d.length > 3) result += d.slice(3, 6);
+    if (d.length > 6) result += '-' + d.slice(6, 8);
+    if (d.length > 8) result += '-' + d.slice(8, 10);
+    return result;
+  }
+  // For international, just group digits
+  return cleaned;
+}
+
 export default function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState('');
@@ -28,9 +49,21 @@ export default function RegisterPage() {
     }
   }, [showWelcome, navigate]);
 
+  const handlePhoneChange = (raw: string) => {
+    // Allow only digits, +, spaces, parens, dashes
+    const digits = raw.replace(/[^\d+() \-]/g, '');
+    // If user is typing and starts with 8, auto-convert to +7
+    if (digits === '8') {
+      setPhone('+7');
+      return;
+    }
+    setPhone(formatPhone(digits));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agreed) { setError('Примите условия использования'); return; }
+    if (phone.replace(/\D/g, '').length < 10) { setError('Введите корректный номер телефона'); return; }
     setError('');
     setLoading(true);
 
@@ -69,6 +102,22 @@ export default function RegisterPage() {
             className="input-premium"
             required
           />
+
+          {/* Phone with international support */}
+          <div className="relative">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-300">
+              <Phone className="w-4 h-4" />
+            </div>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => handlePhoneChange(e.target.value)}
+              placeholder="+7 (___) ___-__-__"
+              className="input-premium pl-11"
+              required
+            />
+          </div>
+
           <input
             type="password"
             value={password}
@@ -78,6 +127,23 @@ export default function RegisterPage() {
             required
             minLength={6}
           />
+
+          {/* Telegram link */}
+          <a
+            href="https://t.me/annamama_bot"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 p-4 bg-surface-50 rounded-2xl border border-surface-200 hover:border-brand-300 transition-colors group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#2AABEE]/10 flex items-center justify-center shrink-0">
+              <SendIcon className="w-5 h-5 text-[#2AABEE]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-ink-900">Привязать Telegram</p>
+              <p className="text-[11px] text-ink-400 leading-snug">Получайте уведомления в мессенджере</p>
+            </div>
+            <span className="text-xs font-bold text-brand-500 group-hover:translate-x-0.5 transition-transform">→</span>
+          </a>
 
           <label className="flex items-start gap-3 cursor-pointer">
             <input
