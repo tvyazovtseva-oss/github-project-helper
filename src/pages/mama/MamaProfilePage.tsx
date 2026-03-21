@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Country, City, ICountry, ICity } from 'country-state-city';
 import {
   User, Baby, Edit3, Calendar, Settings, Bell, BellOff,
   CreditCard, Plus, Crown, Camera, Mail, Phone, MapPin,
@@ -13,7 +14,6 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
-import { COUNTRIES_CITIES } from '@/lib/countriesCities';
 import { toast } from 'sonner';
 
 // ─── Smart age calculation ────────────────────────────────────────────
@@ -57,7 +57,6 @@ interface NotifSetting {
   label: string;
   group: 'system' | 'marketing';
   channels: NotifChannel;
-  /** If true, at least one channel must remain active at all times */
   required?: boolean;
 }
 
@@ -90,8 +89,8 @@ export default function MamaProfilePage() {
   const [patronymic, setPatronymic] = useState('Александровна');
   const [phone, setPhone] = useState('+7 912 345-67-89');
   const [dob, setDob] = useState('1992-05-14');
-  const [country, setCountry] = useState('Россия');
-  const [city, setCity] = useState('Москва');
+  const [selectedCountryCode, setSelectedCountryCode] = useState('RU');
+  const [selectedCityName, setSelectedCityName] = useState('Moscow');
   const [countrySearch, setCountrySearch] = useState('');
   const [citySearch, setCitySearch] = useState('');
   const [showCountryDropdown, setShowCountryDropdown] = useState(false);
@@ -113,24 +112,40 @@ export default function MamaProfilePage() {
   // Notifications
   const [notifSettings, setNotifSettings] = useState(INITIAL_NOTIF_SETTINGS);
 
-  const filteredCountries = useMemo(() =>
-    Object.keys(COUNTRIES_CITIES).filter(c => c.toLowerCase().includes(countrySearch.toLowerCase())),
-    [countrySearch]
+  // ─── Country/City from country-state-city ─────────────────────────
+  const allCountries = useMemo(() => Country.getAllCountries(), []);
+
+  const filteredCountries = useMemo(() => {
+    if (!countrySearch) return allCountries.slice(0, 30);
+    const q = countrySearch.toLowerCase();
+    return allCountries.filter(c =>
+      c.name.toLowerCase().includes(q) || c.isoCode.toLowerCase().includes(q)
+    ).slice(0, 30);
+  }, [countrySearch, allCountries]);
+
+  const citiesForCountry = useMemo(() =>
+    City.getCitiesOfCountry(selectedCountryCode) || [],
+    [selectedCountryCode]
   );
 
-  const filteredCities = useMemo(() =>
-    (COUNTRIES_CITIES[country] || []).filter(c => c.toLowerCase().includes(citySearch.toLowerCase())),
-    [country, citySearch]
+  const filteredCities = useMemo(() => {
+    if (!citySearch) return citiesForCountry.slice(0, 30);
+    const q = citySearch.toLowerCase();
+    return citiesForCountry.filter(c => c.name.toLowerCase().includes(q)).slice(0, 30);
+  }, [citySearch, citiesForCountry]);
+
+  const selectedCountry = useMemo(() =>
+    allCountries.find(c => c.isoCode === selectedCountryCode),
+    [selectedCountryCode, allCountries]
   );
+
+  const countryDisplayName = selectedCountry ? `${selectedCountry.flag} ${selectedCountry.name}` : '';
 
   const toggleNotif = useCallback((key: string, channel: keyof NotifChannel) => {
     setNotifSettings(prev => prev.map(n => {
       if (n.key !== key) return n;
-
       const newChannels = { ...n.channels, [channel]: !n.channels[channel] };
 
-      // For required system items (subscription, access/receipts):
-      // Email must stay on if no other channel is active
       if (n.required) {
         const otherActive = (channel === 'email')
           ? (newChannels.push || newChannels.telegram)
@@ -140,14 +155,11 @@ export default function MamaProfilePage() {
           toast.error('Email нельзя отключить без альтернативного канала (Push или Telegram)');
           return n;
         }
-
-        // If turning off last channel, force email back on
         if (!newChannels.push && !newChannels.email && !newChannels.telegram) {
           toast.error('Должен остаться хотя бы один активный канал');
           return { ...n, channels: { ...newChannels, email: true } };
         }
       }
-
       return { ...n, channels: newChannels };
     }));
   }, []);
@@ -161,12 +173,7 @@ export default function MamaProfilePage() {
 
   const handleSendEmailRequest = () => {
     setEmailSent(true);
-    setTimeout(() => {
-      setShowEmailDialog(false);
-      setEmailSent(false);
-      setNewEmail('');
-      setEmailReason('');
-    }, 1500);
+    setTimeout(() => { setShowEmailDialog(false); setEmailSent(false); setNewEmail(''); setEmailReason(''); }, 1500);
   };
 
   const handleSaveProfile = () => {
@@ -257,14 +264,14 @@ export default function MamaProfilePage() {
 
               <FieldRow label="Дата регистрации" value="15 января 2024" readOnly icon={Calendar} />
 
-              {/* Country — cascading */}
+              {/* Country — cascading with country-state-city */}
               <div className="relative">
                 <div className="p-4 bg-surface-50 rounded-2xl">
                   <p className="text-[10px] text-ink-300 uppercase font-bold tracking-wider mb-1">Страна</p>
                   <div className="flex items-center gap-2">
                     <Globe className="w-4 h-4 text-ink-300 shrink-0" />
                     <input
-                      value={showCountryDropdown ? countrySearch : country}
+                      value={showCountryDropdown ? countrySearch : countryDisplayName}
                       onChange={(e) => { setCountrySearch(e.target.value); setShowCountryDropdown(true); }}
                       onFocus={() => { setShowCountryDropdown(true); setCountrySearch(''); }}
                       onBlur={() => setTimeout(() => setShowCountryDropdown(false), 200)}
@@ -278,11 +285,16 @@ export default function MamaProfilePage() {
                   <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-surface-200 z-20 max-h-48 overflow-y-auto">
                     {filteredCountries.map(c => (
                       <button
-                        key={c}
-                        onMouseDown={() => { setCountry(c); setCity(''); setCitySearch(''); setShowCountryDropdown(false); }}
-                        className={`w-full text-left px-4 py-3 text-sm hover:bg-surface-50 transition-colors first:rounded-t-2xl last:rounded-b-2xl ${c === country ? 'font-bold text-brand-500' : 'text-ink-700'}`}
+                        key={c.isoCode}
+                        onMouseDown={() => {
+                          setSelectedCountryCode(c.isoCode);
+                          setSelectedCityName('');
+                          setCitySearch('');
+                          setShowCountryDropdown(false);
+                        }}
+                        className={`w-full text-left px-4 py-3 text-sm hover:bg-surface-50 transition-colors first:rounded-t-2xl last:rounded-b-2xl ${c.isoCode === selectedCountryCode ? 'font-bold text-brand-500' : 'text-ink-700'}`}
                       >
-                        {c}
+                        {c.flag} {c.name}
                       </button>
                     ))}
                   </div>
@@ -296,26 +308,26 @@ export default function MamaProfilePage() {
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-ink-300 shrink-0" />
                     <input
-                      value={showCityDropdown ? citySearch : city}
+                      value={showCityDropdown ? citySearch : selectedCityName}
                       onChange={(e) => { setCitySearch(e.target.value); setShowCityDropdown(true); }}
                       onFocus={() => { setShowCityDropdown(true); setCitySearch(''); }}
                       onBlur={() => setTimeout(() => setShowCityDropdown(false), 200)}
                       className="flex-1 text-sm font-bold text-ink-900 bg-transparent outline-none"
-                      placeholder={country ? 'Начните вводить...' : 'Сначала выберите страну'}
-                      disabled={!country}
+                      placeholder={selectedCountryCode ? 'Начните вводить...' : 'Сначала выберите страну'}
+                      disabled={!selectedCountryCode}
                     />
                     <Pencil className="w-3.5 h-3.5 text-ink-200 shrink-0" />
                   </div>
                 </div>
                 {showCityDropdown && filteredCities.length > 0 && (
                   <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-surface-200 z-20 max-h-48 overflow-y-auto">
-                    {filteredCities.map(c => (
+                    {filteredCities.map((c, idx) => (
                       <button
-                        key={c}
-                        onMouseDown={() => { setCity(c); setShowCityDropdown(false); }}
-                        className={`w-full text-left px-4 py-3 text-sm hover:bg-surface-50 transition-colors first:rounded-t-2xl last:rounded-b-2xl ${c === city ? 'font-bold text-brand-500' : 'text-ink-700'}`}
+                        key={`${c.name}-${idx}`}
+                        onMouseDown={() => { setSelectedCityName(c.name); setShowCityDropdown(false); }}
+                        className={`w-full text-left px-4 py-3 text-sm hover:bg-surface-50 transition-colors first:rounded-t-2xl last:rounded-b-2xl ${c.name === selectedCityName ? 'font-bold text-brand-500' : 'text-ink-700'}`}
                       >
-                        {c}
+                        {c.name}
                       </button>
                     ))}
                   </div>
@@ -339,10 +351,7 @@ export default function MamaProfilePage() {
           <div className="animate-fade-in">
             <div className="space-y-2 mb-4">
               {children.map(child => (
-                <div
-                  key={child.id}
-                  className="flex items-center gap-4 p-4 bg-surface-50 rounded-2xl"
-                >
+                <div key={child.id} className="flex items-center gap-4 p-4 bg-surface-50 rounded-2xl">
                   <div className="w-11 h-11 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
                     <Baby className="w-5 h-5 text-brand-500" />
                   </div>
@@ -384,7 +393,6 @@ export default function MamaProfilePage() {
         {/* ─── Notifications tab (Рассылки) ────────────────────── */}
         {activeTab === 'Рассылки' && (
           <div className="animate-fade-in space-y-6">
-            {/* System notifications */}
             <div>
               <h3 className="text-xs font-bold text-ink-300 uppercase tracking-wider mb-3">Системные уведомления</h3>
               <div className="space-y-3">
@@ -393,8 +401,6 @@ export default function MamaProfilePage() {
                 ))}
               </div>
             </div>
-
-            {/* Marketing */}
             <div>
               <h3 className="text-xs font-bold text-ink-300 uppercase tracking-wider mb-3">Маркетинговые рассылки</h3>
               <div className="space-y-3">
@@ -421,11 +427,7 @@ export default function MamaProfilePage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm text-ink-900">{sub.name}</p>
                     <p className="text-[10px] text-ink-400">
-                      {sub.status === 'lifetime'
-                        ? 'Бессрочная'
-                        : sub.status === 'expired'
-                          ? `Истекла: ${sub.expiresTime}`
-                          : `До ${sub.expiresTime}`}
+                      {sub.status === 'lifetime' ? 'Бессрочная' : sub.status === 'expired' ? `Истекла: ${sub.expiresTime}` : `До ${sub.expiresTime}`}
                     </p>
                   </div>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
@@ -475,13 +477,7 @@ export default function MamaProfilePage() {
               </div>
               <div>
                 <label className="text-xs font-bold text-ink-500 mb-1 block">Новый Email</label>
-                <input
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  type="email"
-                  placeholder="new@email.com"
-                  className="input-premium"
-                />
+                <input value={newEmail} onChange={(e) => setNewEmail(e.target.value)} type="email" placeholder="new@email.com" className="input-premium" />
               </div>
               <div>
                 <label className="text-xs font-bold text-ink-500 mb-1 block">Причина</label>
@@ -624,12 +620,7 @@ function ChildDialog({
   prevOpen.current = open;
 
   const handleSave = () => {
-    onSave({
-      id: child?.id || `child_${Date.now()}`,
-      name,
-      gender,
-      birthdate,
-    });
+    onSave({ id: child?.id || `child_${Date.now()}`, name, gender, birthdate });
   };
 
   return (
