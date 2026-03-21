@@ -112,8 +112,7 @@ export default function AdminLayout({ role = 'admin' }: AdminLayoutProps) {
             <Menu className="w-5 h-5 text-ink-900" />
           </button>
           <div className="flex items-center gap-2">
-            <Heart className="w-5 h-5 text-brand-500 fill-brand-500" />
-            <span className="font-bold text-ink-900">Anna MAMA</span>
+            <span className="text-xl font-bold text-brand-500">Аннамама</span>
           </div>
           <div className="ml-auto w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center text-white font-bold text-xs">
             {user?.full_name?.[0] || 'U'}

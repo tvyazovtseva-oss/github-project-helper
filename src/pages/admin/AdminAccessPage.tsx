@@ -11,7 +11,7 @@ interface Tier {
 
 export default function AdminAccessPage() {
   const [product, setProduct] = useState({
-    name: 'Клуб Anna MAMA',
+    name: 'Клуб Аннамама',
     color: '#f43f5e',
     tiers: [
       { id: '1', name: 'Месячный', price: 1900, duration: '30', preAccess: 0 },

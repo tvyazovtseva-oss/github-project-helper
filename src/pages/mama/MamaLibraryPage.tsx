@@ -7,13 +7,13 @@ type ViewStatus = 'all' | 'new' | 'viewed';
 const CATEGORIES = ['Все', 'Сон', 'Питание', 'Здоровье', 'Развитие', 'Психология'];
 
 const MATERIALS = [
-  { id: 1, title: 'Как наладить сон ребёнка до года', type: 'video' as const, category: 'Сон', rating: 4.9, product: 'Клуб Anna MAMA', viewed: true },
-  { id: 2, title: 'Памятка: Введение прикорма', type: 'pdf' as const, category: 'Питание', rating: 4.8, product: 'Клуб Anna MAMA', viewed: true },
+  { id: 1, title: 'Как наладить сон ребёнка до года', type: 'video' as const, category: 'Сон', rating: 4.9, product: 'Клуб Аннамама', viewed: true },
+  { id: 2, title: 'Памятка: Введение прикорма', type: 'pdf' as const, category: 'Питание', rating: 4.8, product: 'Клуб Аннамама', viewed: true },
   { id: 3, title: 'Что делать при коликах?', type: 'article' as const, category: 'Здоровье', rating: 4.5, product: 'Первая Помощь', viewed: false },
-  { id: 4, title: 'Когда начинать закаливание', type: 'article' as const, category: 'Здоровье', rating: 4.7, product: 'Клуб Anna MAMA', viewed: false },
+  { id: 4, title: 'Когда начинать закаливание', type: 'article' as const, category: 'Здоровье', rating: 4.7, product: 'Клуб Аннамама', viewed: false },
   { id: 5, title: 'Этапы развития речи 0-3', type: 'video' as const, category: 'Развитие', rating: 4.6, product: 'Сон малыша', viewed: true },
   { id: 6, title: 'Послеродовая тревожность', type: 'article' as const, category: 'Психология', rating: 4.9, product: 'Женская Среда', viewed: false },
-  { id: 7, title: 'Вебинар: Первый прикорм', type: 'video' as const, category: 'Питание', rating: 4.8, product: 'Клуб Anna MAMA', viewed: false },
+  { id: 7, title: 'Вебинар: Первый прикорм', type: 'video' as const, category: 'Питание', rating: 4.8, product: 'Клуб Аннамама', viewed: false },
   { id: 8, title: 'Гайд: Сон без слёз', type: 'pdf' as const, category: 'Сон', rating: 4.9, product: 'Сон малыша', viewed: false },
 ];
 
