@@ -1,52 +1,202 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  User, Baby, Edit3, ChevronRight, Calendar, Settings, Bell, BellOff,
-  CreditCard, Plus, Crown, Check, Ruler, Weight
+  User, Baby, Edit3, Calendar, Settings, Bell, BellOff,
+  CreditCard, Plus, Crown, Camera, Mail, Phone, MapPin,
+  Globe, Send, X, Trash2, MessageSquare, ChevronDown
 } from 'lucide-react';
-import GrowthChart from '@/components/GrowthChart';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog';
 
-const CHILDREN = [
-  { id: 'child_1', name: 'София', birthdate: '2024-01-15', gender: 'girl' as const, active: true },
-  { id: 'child_2', name: 'Даниил', birthdate: '2022-06-10', gender: 'boy' as const, active: false },
+// ─── Smart age calculation ────────────────────────────────────────────
+function calcAge(birthdate: string): string {
+  const born = new Date(birthdate);
+  const now = new Date();
+  let years = now.getFullYear() - born.getFullYear();
+  let months = now.getMonth() - born.getMonth();
+  if (now.getDate() < born.getDate()) months--;
+  if (months < 0) { years--; months += 12; }
+
+  const totalMonths = years * 12 + months;
+
+  if (totalMonths < 12) return `${totalMonths} мес`;
+  if (totalMonths < 24) return `${years} год ${months > 0 ? months + ' мес' : ''}`.trim();
+  if (years < 5) return `${years} г ${months > 0 ? months + ' мес' : ''}`.trim();
+  return `${years} лет`;
+}
+
+// ─── Country / City data ──────────────────────────────────────────────
+const COUNTRIES_CITIES: Record<string, string[]> = {
+  'Россия': ['Москва', 'Санкт-Петербург', 'Казань', 'Новосибирск', 'Екатеринбург', 'Нижний Новгород', 'Краснодар', 'Сочи', 'Ростов-на-Дону', 'Самара', 'Уфа', 'Красноярск', 'Воронеж', 'Пермь', 'Волгоград'],
+  'Казахстан': ['Алматы', 'Астана', 'Шымкент', 'Караганда', 'Актобе'],
+  'Беларусь': ['Минск', 'Гомель', 'Могилёв', 'Витебск', 'Гродно', 'Брест'],
+  'Украина': ['Киев', 'Харьков', 'Одесса', 'Днепр', 'Львов'],
+  'Узбекистан': ['Ташкент', 'Самарканд', 'Бухара', 'Наманган'],
+  'Грузия': ['Тбилиси', 'Батуми', 'Кутаиси'],
+  'Кыргызстан': ['Бишкек', 'Ош'],
+  'Турция': ['Стамбул', 'Анталья', 'Анкара', 'Измир'],
+  'ОАЭ': ['Дубай', 'Абу-Даби', 'Шарджа'],
+  'Германия': ['Берлин', 'Мюнхен', 'Гамбург', 'Франкфурт'],
+  'США': ['Нью-Йорк', 'Лос-Анджелес', 'Майами', 'Чикаго', 'Сан-Франциско'],
+};
+
+// ─── Mock data ────────────────────────────────────────────────────────
+interface Child {
+  id: string;
+  name: string;
+  birthdate: string;
+  gender: 'girl' | 'boy';
+}
+
+const INITIAL_CHILDREN: Child[] = [
+  { id: 'child_1', name: 'София', birthdate: '2024-01-15', gender: 'girl' },
+  { id: 'child_2', name: 'Даниил', birthdate: '2022-06-10', gender: 'boy' },
 ];
 
-const NOTIFICATION_SETTINGS = [
-  { key: 'courses', label: 'Обновления курсов', push: true, email: true },
-  { key: 'health', label: 'Медицинские напоминания', push: true, email: false },
-  { key: 'webinars', label: 'Вебинары и эфиры', push: true, email: true },
-  { key: 'promo', label: 'Акции и предложения', push: false, email: false },
+interface NotifChannel {
+  push: boolean;
+  email: boolean;
+  telegram: boolean;
+}
+
+interface NotifSetting {
+  key: string;
+  label: string;
+  group: 'system' | 'marketing';
+  channels: NotifChannel;
+}
+
+const INITIAL_NOTIF_SETTINGS: NotifSetting[] = [
+  { key: 'courses', label: 'Обновления курсов', group: 'system', channels: { push: true, email: true, telegram: false } },
+  { key: 'health', label: 'Напоминания по медкарте и здоровью', group: 'system', channels: { push: true, email: false, telegram: false } },
+  { key: 'webinars', label: 'Вебинары и эфиры', group: 'system', channels: { push: true, email: true, telegram: true } },
+  { key: 'subscription', label: 'Окончание подписки', group: 'system', channels: { push: true, email: true, telegram: false } },
+  { key: 'access', label: 'Доступ к курсам и чеки', group: 'system', channels: { push: true, email: true, telegram: false } },
+  { key: 'promo', label: 'Акции и предложения', group: 'marketing', channels: { push: false, email: false, telegram: false } },
 ];
 
 const SUBSCRIPTIONS = [
-  { id: 'club_main', name: 'Клуб Аннамама', status: 'active' as const, expires: '24.04.2026', price: '2 990 ₽/мес', color: '#FF2D55' },
-  { id: 'club_woman', name: 'Женская Среда', status: 'active' as const, expires: '12.05.2026', price: '1 990 ₽/мес', color: '#AF52DE' },
-  { id: 'course_first_aid', name: 'Первая Помощь', status: 'lifetime' as const, expires: '', price: 'Навсегда', color: '#FF9500' },
-  { id: 'course_sleep', name: 'Сон малыша', status: 'active' as const, expires: '01.03.2026', price: '4 990 ₽', color: '#5856D6' },
+  { id: 'club_main', name: 'Клуб Аннамама', status: 'active' as const, expires: '24.04.2026', expiresTime: '24.04.2026, 23:59', paidDate: '24.04.2025', price: '2 990 ₽/мес', color: '#FF2D55' },
+  { id: 'club_woman', name: 'Женская Среда', status: 'active' as const, expires: '12.05.2026', expiresTime: '12.05.2026, 23:59', paidDate: '12.05.2025', price: '1 990 ₽/мес', color: '#AF52DE' },
+  { id: 'course_first_aid', name: 'Первая Помощь', status: 'lifetime' as const, expires: '', expiresTime: '', paidDate: '01.09.2024', price: 'Навсегда', color: '#FF9500' },
+  { id: 'course_sleep', name: 'Сон малыша', status: 'expired' as const, expires: '01.03.2025', expiresTime: '01.03.2025, 23:59', paidDate: '01.03.2024', price: '4 990 ₽', color: '#5856D6' },
 ];
 
-const TABS = ['Профиль', 'Дети', 'Уведомления', 'Подписки'];
+const TABS = ['Профиль', 'Дети', 'Рассылки', 'Подписки'];
 
+// ─── Component ────────────────────────────────────────────────────────
 export default function MamaProfilePage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('Профиль');
-  const [notifSettings, setNotifSettings] = useState(NOTIFICATION_SETTINGS);
-  const [selectedChild, setSelectedChild] = useState(CHILDREN[0]);
 
-  const toggleNotif = (key: string, type: 'push' | 'email') => {
+  // Profile fields
+  const [lastName, setLastName] = useState('Петрова');
+  const [firstName, setFirstName] = useState(user?.full_name?.split(' ')[0] || 'Мария');
+  const [patronymic, setPatronymic] = useState('Александровна');
+  const [phone, setPhone] = useState('+7 912 345-67-89');
+  const [dob, setDob] = useState('1992-05-14');
+  const [country, setCountry] = useState('Россия');
+  const [city, setCity] = useState('Москва');
+  const [countrySearch, setCountrySearch] = useState('');
+  const [citySearch, setCitySearch] = useState('');
+  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Email change dialog
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailReason, setEmailReason] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
+
+  // Children
+  const [children, setChildren] = useState<Child[]>(INITIAL_CHILDREN);
+  const [editingChild, setEditingChild] = useState<Child | null>(null);
+  const [showChildDialog, setShowChildDialog] = useState(false);
+
+  // Notifications
+  const [notifSettings, setNotifSettings] = useState(INITIAL_NOTIF_SETTINGS);
+
+  const filteredCountries = useMemo(() =>
+    Object.keys(COUNTRIES_CITIES).filter(c => c.toLowerCase().includes(countrySearch.toLowerCase())),
+    [countrySearch]
+  );
+
+  const filteredCities = useMemo(() =>
+    (COUNTRIES_CITIES[country] || []).filter(c => c.toLowerCase().includes(citySearch.toLowerCase())),
+    [country, citySearch]
+  );
+
+  const toggleNotif = useCallback((key: string, channel: keyof NotifChannel) => {
     setNotifSettings(prev => prev.map(n =>
-      n.key === key ? { ...n, [type]: !n[type] } : n
+      n.key === key ? { ...n, channels: { ...n.channels, [channel]: !n.channels[channel] } } : n
     ));
+  }, []);
+
+  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Revoke old URL to free memory (simulates deleting old avatar from storage)
+    if (avatarUrl) URL.revokeObjectURL(avatarUrl);
+    setAvatarUrl(URL.createObjectURL(file));
   };
+
+  const handleSendEmailRequest = () => {
+    // In production: send request to admin via API
+    setEmailSent(true);
+    setTimeout(() => {
+      setShowEmailDialog(false);
+      setEmailSent(false);
+      setNewEmail('');
+      setEmailReason('');
+    }, 1500);
+  };
+
+  const saveChild = (child: Child) => {
+    setChildren(prev => {
+      const exists = prev.find(c => c.id === child.id);
+      if (exists) return prev.map(c => c.id === child.id ? child : c);
+      return [...prev, child];
+    });
+    setShowChildDialog(false);
+    setEditingChild(null);
+  };
+
+  const deleteChild = (id: string) => {
+    setChildren(prev => prev.filter(c => c.id !== id));
+  };
+
+  const systemNotifs = notifSettings.filter(n => n.group === 'system');
+  const marketingNotifs = notifSettings.filter(n => n.group === 'marketing');
 
   return (
     <div className="pb-6 animate-fade-in">
-      {/* User header */}
+      {/* Avatar + name header */}
       <div className="px-4 pt-6 pb-4 text-center">
-        <div className="w-20 h-20 rounded-full bg-brand-100 flex items-center justify-center mx-auto mb-3">
-          <User className="w-8 h-8 text-brand-500" />
+        <div className="relative w-20 h-20 mx-auto mb-3">
+          <div className="w-20 h-20 rounded-full bg-brand-100 flex items-center justify-center overflow-hidden">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Аватар" className="w-full h-full object-cover" />
+            ) : (
+              <User className="w-8 h-8 text-brand-500" />
+            )}
+          </div>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute -bottom-1 -right-1 w-8 h-8 bg-ink-900 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform"
+          >
+            <Camera className="w-3.5 h-3.5 text-white" />
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
         </div>
-        <h2 className="text-lg font-bold text-ink-900">{user?.full_name}</h2>
+        <h2 className="text-lg font-bold text-ink-900">{lastName} {firstName}</h2>
         <p className="text-sm text-ink-400">{user?.email}</p>
       </div>
 
@@ -66,82 +216,173 @@ export default function MamaProfilePage() {
       </div>
 
       <div className="px-4">
-        {/* Profile tab */}
+        {/* ─── Profile tab ─────────────────────────────────────── */}
         {activeTab === 'Профиль' && (
           <div className="space-y-3 animate-fade-in">
-            <ProfileCard icon={User} label="Имя" value={user?.full_name || ''} editable />
-            <ProfileCard icon={Settings} label="Email" value={user?.email || ''} />
-            <ProfileCard icon={Calendar} label="Дата регистрации" value="15 января 2024" />
-            <button
-              onClick={logout}
-              className="w-full mt-6 py-3 text-destructive font-bold text-sm bg-destructive/5 rounded-2xl active:scale-[0.97] transition-transform"
-            >
-              Выйти из аккаунта
-            </button>
+            <FieldRow label="Фамилия" value={lastName} onChange={setLastName} />
+            <FieldRow label="Имя" value={firstName} onChange={setFirstName} />
+            <FieldRow label="Отчество" value={patronymic} onChange={setPatronymic} placeholder="Необязательно" />
+            <FieldRow label="Телефон" value={phone} onChange={setPhone} type="tel" icon={Phone} />
+            <FieldRow label="Дата рождения" value={dob} onChange={setDob} type="date" icon={Calendar} />
+
+            {/* Email — read-only + button */}
+            <div className="p-4 bg-surface-50 rounded-2xl">
+              <p className="text-[10px] text-ink-300 uppercase font-bold tracking-wider mb-1">Email</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-bold text-ink-900 truncate">{user?.email}</p>
+                <button
+                  onClick={() => setShowEmailDialog(true)}
+                  className="text-[11px] font-bold text-brand-500 whitespace-nowrap active:scale-95 transition-transform flex items-center gap-1"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  Изменить
+                </button>
+              </div>
+            </div>
+
+            <FieldRow label="Дата регистрации" value="15 января 2024" readOnly icon={Calendar} />
+
+            {/* Country — cascading */}
+            <div className="relative">
+              <div className="p-4 bg-surface-50 rounded-2xl">
+                <p className="text-[10px] text-ink-300 uppercase font-bold tracking-wider mb-1">Страна</p>
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-ink-300 shrink-0" />
+                  <input
+                    value={showCountryDropdown ? countrySearch : country}
+                    onChange={(e) => { setCountrySearch(e.target.value); setShowCountryDropdown(true); }}
+                    onFocus={() => { setShowCountryDropdown(true); setCountrySearch(''); }}
+                    onBlur={() => setTimeout(() => setShowCountryDropdown(false), 200)}
+                    className="flex-1 text-sm font-bold text-ink-900 bg-transparent outline-none"
+                    placeholder="Начните вводить..."
+                  />
+                </div>
+              </div>
+              {showCountryDropdown && filteredCountries.length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-surface-200 z-20 max-h-48 overflow-y-auto">
+                  {filteredCountries.map(c => (
+                    <button
+                      key={c}
+                      onMouseDown={() => { setCountry(c); setCity(''); setCitySearch(''); setShowCountryDropdown(false); }}
+                      className={`w-full text-left px-4 py-3 text-sm hover:bg-surface-50 transition-colors first:rounded-t-2xl last:rounded-b-2xl ${c === country ? 'font-bold text-brand-500' : 'text-ink-700'}`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* City — cascading */}
+            <div className="relative">
+              <div className="p-4 bg-surface-50 rounded-2xl">
+                <p className="text-[10px] text-ink-300 uppercase font-bold tracking-wider mb-1">Город</p>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-ink-300 shrink-0" />
+                  <input
+                    value={showCityDropdown ? citySearch : city}
+                    onChange={(e) => { setCitySearch(e.target.value); setShowCityDropdown(true); }}
+                    onFocus={() => { setShowCityDropdown(true); setCitySearch(''); }}
+                    onBlur={() => setTimeout(() => setShowCityDropdown(false), 200)}
+                    className="flex-1 text-sm font-bold text-ink-900 bg-transparent outline-none"
+                    placeholder={country ? 'Начните вводить...' : 'Сначала выберите страну'}
+                    disabled={!country}
+                  />
+                </div>
+              </div>
+              {showCityDropdown && filteredCities.length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-surface-200 z-20 max-h-48 overflow-y-auto">
+                  {filteredCities.map(c => (
+                    <button
+                      key={c}
+                      onMouseDown={() => { setCity(c); setShowCityDropdown(false); }}
+                      className={`w-full text-left px-4 py-3 text-sm hover:bg-surface-50 transition-colors first:rounded-t-2xl last:rounded-b-2xl ${c === city ? 'font-bold text-brand-500' : 'text-ink-700'}`}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Children tab */}
+        {/* ─── Children tab ────────────────────────────────────── */}
         {activeTab === 'Дети' && (
           <div className="animate-fade-in">
             <div className="space-y-2 mb-4">
-              {CHILDREN.map(child => (
-                <button
+              {children.map(child => (
+                <div
                   key={child.id}
-                  onClick={() => setSelectedChild(child)}
-                  className={`w-full flex items-center gap-4 p-4 rounded-2xl transition-all active:scale-[0.98] ${
-                    selectedChild.id === child.id ? 'bg-brand-50 ring-1 ring-brand-200' : 'bg-surface-50'
-                  }`}
+                  className="flex items-center gap-4 p-4 bg-surface-50 rounded-2xl"
                 >
                   <div className="w-11 h-11 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
                     <Baby className="w-5 h-5 text-brand-500" />
                   </div>
-                  <div className="flex-1 text-left">
+                  <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm text-ink-900">{child.name}</p>
-                    <p className="text-xs text-ink-400">{new Date(child.birthdate).toLocaleDateString('ru')} · {child.gender === 'girl' ? 'Девочка' : 'Мальчик'}</p>
+                    <p className="text-xs text-ink-400">
+                      {child.gender === 'girl' ? 'Девочка' : 'Мальчик'} · {calcAge(child.birthdate)}
+                    </p>
+                    <p className="text-[10px] text-ink-300 mt-0.5">
+                      {new Date(child.birthdate).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </p>
                   </div>
-                  {selectedChild.id === child.id && <Check className="w-5 h-5 text-brand-500" />}
-                </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => { setEditingChild(child); setShowChildDialog(true); }}
+                      className="p-2 rounded-xl hover:bg-surface-200 transition-colors"
+                    >
+                      <Edit3 className="w-4 h-4 text-ink-300" />
+                    </button>
+                    <button
+                      onClick={() => deleteChild(child.id)}
+                      className="p-2 rounded-xl hover:bg-destructive/10 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4 text-ink-300" />
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
-            <button className="w-full flex items-center justify-center gap-2 p-3 bg-surface-100 rounded-2xl text-sm font-bold text-ink-400 active:scale-[0.98] transition-transform">
+            <button
+              onClick={() => { setEditingChild(null); setShowChildDialog(true); }}
+              className="w-full flex items-center justify-center gap-2 p-3 bg-surface-100 rounded-2xl text-sm font-bold text-ink-400 active:scale-[0.98] transition-transform"
+            >
               <Plus className="w-4 h-4" /> Добавить ребёнка
             </button>
           </div>
         )}
 
-        {/* Notifications tab */}
-        {activeTab === 'Уведомления' && (
-          <div className="space-y-3 animate-fade-in">
-            {notifSettings.map(n => (
-              <div key={n.key} className="p-4 bg-surface-50 rounded-2xl">
-                <p className="font-bold text-sm text-ink-900 mb-3">{n.label}</p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => toggleNotif(n.key, 'push')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                      n.push ? 'bg-ink-900 text-white' : 'bg-surface-200 text-ink-400'
-                    }`}
-                  >
-                    {n.push ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
-                    Push
-                  </button>
-                  <button
-                    onClick={() => toggleNotif(n.key, 'email')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                      n.email ? 'bg-ink-900 text-white' : 'bg-surface-200 text-ink-400'
-                    }`}
-                  >
-                    {n.email ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
-                    Email
-                  </button>
-                </div>
+        {/* ─── Notifications tab (Рассылки) ────────────────────── */}
+        {activeTab === 'Рассылки' && (
+          <div className="animate-fade-in space-y-6">
+            {/* System notifications */}
+            <div>
+              <h3 className="text-xs font-bold text-ink-300 uppercase tracking-wider mb-3">Системные уведомления</h3>
+              <div className="space-y-3">
+                {systemNotifs.map(n => (
+                  <NotifSettingCard key={n.key} item={n} onToggle={toggleNotif} />
+                ))}
               </div>
-            ))}
+            </div>
+
+            {/* Marketing */}
+            <div>
+              <h3 className="text-xs font-bold text-ink-300 uppercase tracking-wider mb-3">Маркетинговые рассылки</h3>
+              <div className="space-y-3">
+                {marketingNotifs.map(n => (
+                  <NotifSettingCard key={n.key} item={n} onToggle={toggleNotif} />
+                ))}
+              </div>
+              <p className="text-[10px] text-ink-300 mt-2 px-1">
+                Вы можете отключить маркетинговые рассылки в любой момент. Системные уведомления нельзя полностью отключить.
+              </p>
+            </div>
           </div>
         )}
 
-        {/* Subscriptions tab */}
+        {/* ─── Subscriptions tab ───────────────────────────────── */}
         {activeTab === 'Подписки' && (
           <div className="space-y-3 animate-fade-in">
             {SUBSCRIPTIONS.map(sub => (
@@ -150,23 +391,32 @@ export default function MamaProfilePage() {
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: sub.color + '15' }}>
                     <Crown className="w-4 h-4" style={{ color: sub.color }} />
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm text-ink-900">{sub.name}</p>
                     <p className="text-[10px] text-ink-400">
-                      {sub.status === 'lifetime' ? 'Бессрочная' : `До ${sub.expires}`}
+                      {sub.status === 'lifetime'
+                        ? 'Бессрочная'
+                        : sub.status === 'expired'
+                          ? `Истекла: ${sub.expiresTime}`
+                          : `До ${sub.expiresTime}`}
                     </p>
                   </div>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    sub.status === 'active' ? 'bg-green-50 text-green-600' : 'bg-blue-50 text-blue-600'
+                    sub.status === 'active' ? 'bg-green-50 text-green-600'
+                    : sub.status === 'expired' ? 'bg-surface-200 text-ink-400'
+                    : 'bg-blue-50 text-blue-600'
                   }`}>
-                    {sub.status === 'active' ? 'Активна' : 'Навсегда'}
+                    {sub.status === 'active' ? 'Активна' : sub.status === 'expired' ? 'Истекла' : 'Навсегда'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between pt-3 border-t border-surface-200">
-                  <span className="text-xs font-bold text-ink-500">{sub.price}</span>
-                  {sub.status === 'active' && (
+                  <div className="text-left">
+                    <span className="text-xs font-bold text-ink-500">{sub.price}</span>
+                    <p className="text-[10px] text-ink-300">Оплачено: {sub.paidDate}</p>
+                  </div>
+                  {sub.status !== 'lifetime' && (
                     <button className="text-xs font-bold text-brand-500 active:scale-95 transition-transform">
-                      Продлить
+                      Продлить →
                     </button>
                   )}
                 </div>
@@ -175,21 +425,227 @@ export default function MamaProfilePage() {
           </div>
         )}
       </div>
+
+      {/* ─── Email change dialog ───────────────────────────────── */}
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent className="sm:max-w-sm rounded-3xl">
+          <DialogHeader>
+            <DialogTitle>Запрос на смену Email</DialogTitle>
+          </DialogHeader>
+          {emailSent ? (
+            <div className="text-center py-6 animate-fade-in">
+              <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
+                <Send className="w-6 h-6 text-green-500" />
+              </div>
+              <p className="text-sm font-bold text-ink-900">Заявка отправлена!</p>
+              <p className="text-xs text-ink-400 mt-1">Администратор свяжется с вами</p>
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              <div>
+                <label className="text-xs font-bold text-ink-500 mb-1 block">Текущий Email</label>
+                <p className="text-sm text-ink-400 bg-surface-50 px-4 py-3 rounded-xl">{user?.email}</p>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-ink-500 mb-1 block">Новый Email</label>
+                <input
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  type="email"
+                  placeholder="new@email.com"
+                  className="input-premium"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-ink-500 mb-1 block">Причина</label>
+                <textarea
+                  value={emailReason}
+                  onChange={(e) => setEmailReason(e.target.value)}
+                  placeholder="Укажите причину смены..."
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl bg-surface-50 border border-surface-200 text-sm text-ink-900 outline-none focus:ring-2 focus:ring-brand-500/30 resize-none"
+                />
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <button className="px-4 py-2.5 text-sm font-bold text-ink-400 rounded-xl">Отмена</button>
+                </DialogClose>
+                <button
+                  onClick={handleSendEmailRequest}
+                  disabled={!newEmail || !emailReason}
+                  className="px-5 py-2.5 bg-ink-900 text-white text-sm font-bold rounded-xl disabled:opacity-40 active:scale-95 transition-transform"
+                >
+                  Отправить
+                </button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Child edit/add dialog ─────────────────────────────── */}
+      <ChildDialog
+        open={showChildDialog}
+        onOpenChange={(open) => { setShowChildDialog(open); if (!open) setEditingChild(null); }}
+        child={editingChild}
+        onSave={saveChild}
+      />
     </div>
   );
 }
 
-function ProfileCard({ icon: Icon, label, value, editable }: { icon: typeof User; label: string; value: string; editable?: boolean }) {
+// ─── Sub-components ───────────────────────────────────────────────────
+
+function FieldRow({
+  label, value, onChange, readOnly, type = 'text', placeholder, icon: Icon,
+}: {
+  label: string;
+  value: string;
+  onChange?: (v: string) => void;
+  readOnly?: boolean;
+  type?: string;
+  placeholder?: string;
+  icon?: typeof User;
+}) {
   return (
-    <div className="flex items-center gap-4 p-4 bg-surface-50 rounded-2xl">
-      <div className="w-10 h-10 rounded-xl bg-brand-50 flex items-center justify-center shrink-0">
-        <Icon className="w-5 h-5 text-brand-500" />
+    <div className="p-4 bg-surface-50 rounded-2xl">
+      <p className="text-[10px] text-ink-300 uppercase font-bold tracking-wider mb-1">{label}</p>
+      <div className="flex items-center gap-2">
+        {Icon && <Icon className="w-4 h-4 text-ink-300 shrink-0" />}
+        {readOnly ? (
+          <p className="text-sm font-bold text-ink-900">{value}</p>
+        ) : (
+          <input
+            type={type}
+            value={value}
+            onChange={(e) => onChange?.(e.target.value)}
+            placeholder={placeholder}
+            className="flex-1 text-sm font-bold text-ink-900 bg-transparent outline-none placeholder:text-ink-200 placeholder:font-normal"
+          />
+        )}
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] text-ink-300 uppercase font-bold tracking-wider">{label}</p>
-        <p className="text-sm font-bold text-ink-900 truncate">{value}</p>
-      </div>
-      {editable ? <Edit3 className="w-4 h-4 text-ink-200" /> : <ChevronRight className="w-4 h-4 text-ink-200" />}
     </div>
+  );
+}
+
+function NotifSettingCard({
+  item, onToggle,
+}: {
+  item: NotifSetting;
+  onToggle: (key: string, channel: keyof NotifChannel) => void;
+}) {
+  const channels: { key: keyof NotifChannel; label: string }[] = [
+    { key: 'push', label: 'Push' },
+    { key: 'email', label: 'Email' },
+    { key: 'telegram', label: 'Telegram' },
+  ];
+
+  return (
+    <div className="p-4 bg-surface-50 rounded-2xl">
+      <p className="font-bold text-sm text-ink-900 mb-3">{item.label}</p>
+      <div className="flex gap-2">
+        {channels.map(ch => (
+          <button
+            key={ch.key}
+            onClick={() => onToggle(item.key, ch.key)}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[11px] font-bold transition-all ${
+              item.channels[ch.key] ? 'bg-ink-900 text-white' : 'bg-surface-200 text-ink-400'
+            }`}
+          >
+            {item.channels[ch.key] ? <Bell className="w-3 h-3" /> : <BellOff className="w-3 h-3" />}
+            {ch.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChildDialog({
+  open, onOpenChange, child, onSave,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  child: Child | null;
+  onSave: (c: Child) => void;
+}) {
+  const [name, setName] = useState('');
+  const [gender, setGender] = useState<'girl' | 'boy'>('girl');
+  const [birthdate, setBirthdate] = useState('');
+
+  // Reset when opening
+  const prevOpen = useRef(open);
+  if (open && !prevOpen.current) {
+    if (child) {
+      setName(child.name);
+      setGender(child.gender);
+      setBirthdate(child.birthdate);
+    } else {
+      setName('');
+      setGender('girl');
+      setBirthdate('');
+    }
+  }
+  prevOpen.current = open;
+
+  const handleSave = () => {
+    onSave({
+      id: child?.id || `child_${Date.now()}`,
+      name,
+      gender,
+      birthdate,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm rounded-3xl">
+        <DialogHeader>
+          <DialogTitle>{child ? 'Редактировать' : 'Добавить ребёнка'}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div>
+            <label className="text-xs font-bold text-ink-500 mb-1 block">Имя</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} className="input-premium" placeholder="Имя ребёнка" />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-ink-500 mb-1 block">Пол</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setGender('girl')}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${gender === 'girl' ? 'bg-brand-500 text-white' : 'bg-surface-100 text-ink-400'}`}
+              >
+                Девочка
+              </button>
+              <button
+                onClick={() => setGender('boy')}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${gender === 'boy' ? 'bg-brand-500 text-white' : 'bg-surface-100 text-ink-400'}`}
+              >
+                Мальчик
+              </button>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-bold text-ink-500 mb-1 block">Дата рождения</label>
+            <input type="date" value={birthdate} onChange={(e) => setBirthdate(e.target.value)} className="input-premium" />
+          </div>
+          {birthdate && (
+            <p className="text-xs text-ink-400 text-center">Возраст: <strong>{calcAge(birthdate)}</strong></p>
+          )}
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <button className="px-4 py-2.5 text-sm font-bold text-ink-400 rounded-xl">Отмена</button>
+          </DialogClose>
+          <button
+            onClick={handleSave}
+            disabled={!name || !birthdate}
+            className="px-5 py-2.5 bg-ink-900 text-white text-sm font-bold rounded-xl disabled:opacity-40 active:scale-95 transition-transform"
+          >
+            Сохранить
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
