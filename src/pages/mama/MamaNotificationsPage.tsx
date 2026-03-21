@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, BookOpen, Syringe, GraduationCap, CreditCard, Check, Trash2, Archive } from 'lucide-react';
+import { Bell, BookOpen, Syringe, GraduationCap, CreditCard, Check, Trash2, Archive, CheckSquare, Square } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -45,12 +45,16 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
 ];
 
 type Tab = 'new' | 'archive';
+type DeleteMode = 'single' | 'selected' | 'all';
 
 export default function MamaNotificationsPage() {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
   const [activeTab, setActiveTab] = useState<Tab>('new');
-  const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
+  const [deleteMode, setDeleteMode] = useState<DeleteMode | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectMode, setSelectMode] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.read && !n.archived).length;
 
@@ -71,12 +75,60 @@ export default function MamaNotificationsPage() {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, archived: true, read: true } : n));
   };
 
-  const confirmDelete = () => {
-    if (deleteTarget !== null) {
-      setNotifications(prev => prev.filter(n => n.id !== deleteTarget));
-      setDeleteTarget(null);
+  const toggleSelect = useCallback((id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    const visibleIds = visibleNotifs.map(n => n.id);
+    const allSelected = visibleIds.every(id => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(visibleIds));
     }
+  }, [visibleNotifs, selectedIds]);
+
+  const allSelected = visibleNotifs.length > 0 && visibleNotifs.every(n => selectedIds.has(n.id));
+
+  const confirmDelete = () => {
+    if (deleteMode === 'single' && deleteTargetId !== null) {
+      setNotifications(prev => prev.filter(n => n.id !== deleteTargetId));
+    } else if (deleteMode === 'selected') {
+      setNotifications(prev => prev.filter(n => !selectedIds.has(n.id)));
+      setSelectedIds(new Set());
+      setSelectMode(false);
+    } else if (deleteMode === 'all') {
+      setNotifications(prev => prev.filter(n => !n.archived));
+      setSelectedIds(new Set());
+      setSelectMode(false);
+    }
+    setDeleteMode(null);
+    setDeleteTargetId(null);
   };
+
+  const openDeleteSingle = (id: number) => {
+    setDeleteTargetId(id);
+    setDeleteMode('single');
+  };
+
+  const openDeleteSelected = () => setDeleteMode('selected');
+  const openDeleteAll = () => setDeleteMode('all');
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const deleteDialogTitle = deleteMode === 'all'
+    ? 'Удалить весь архив?'
+    : deleteMode === 'selected'
+      ? `Удалить ${selectedIds.size} уведомлений?`
+      : 'Удалить уведомление?';
 
   return (
     <div className="pb-6 animate-fade-in">
@@ -86,17 +138,29 @@ export default function MamaNotificationsPage() {
           <h1 className="text-2xl font-bold text-ink-900" style={{ lineHeight: '1.15' }}>Уведомления</h1>
           {unreadCount > 0 && <p className="text-sm text-ink-400 mt-1">{unreadCount} новых</p>}
         </div>
-        {unreadCount > 0 && activeTab === 'new' && (
-          <button onClick={markAllRead} className="flex items-center gap-1 text-xs font-bold text-brand-500 active:scale-95 transition-transform">
-            <Check className="w-3.5 h-3.5" /> Прочитать все
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {selectMode && selectedIds.size > 0 && (
+            <button onClick={openDeleteSelected} className="flex items-center gap-1 text-xs font-bold text-destructive active:scale-95 transition-transform">
+              <Trash2 className="w-3.5 h-3.5" /> Удалить ({selectedIds.size})
+            </button>
+          )}
+          {selectMode && (
+            <button onClick={exitSelectMode} className="text-xs font-bold text-ink-400 active:scale-95 transition-transform">
+              Отмена
+            </button>
+          )}
+          {!selectMode && unreadCount > 0 && activeTab === 'new' && (
+            <button onClick={markAllRead} className="flex items-center gap-1 text-xs font-bold text-brand-500 active:scale-95 transition-transform">
+              <Check className="w-3.5 h-3.5" /> Прочитать все
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 px-4 mb-4">
+      <div className="flex items-center gap-1 px-4 mb-4">
         <button
-          onClick={() => setActiveTab('new')}
+          onClick={() => { setActiveTab('new'); exitSelectMode(); }}
           className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${activeTab === 'new' ? 'bg-ink-900 text-white' : 'bg-surface-100 text-ink-400'}`}
         >
           Новые {unreadCount > 0 && (
@@ -106,27 +170,94 @@ export default function MamaNotificationsPage() {
           )}
         </button>
         <button
-          onClick={() => setActiveTab('archive')}
+          onClick={() => { setActiveTab('archive'); exitSelectMode(); }}
           className={`px-4 py-2 rounded-full text-xs font-bold transition-all ${activeTab === 'archive' ? 'bg-ink-900 text-white' : 'bg-surface-100 text-ink-400'}`}
         >
           Архив
         </button>
+
+        <div className="flex-1" />
+
+        {/* Archive tab actions */}
+        {activeTab === 'archive' && visibleNotifs.length > 0 && !selectMode && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectMode(true)}
+              className="flex items-center gap-1 text-xs font-bold text-ink-400 active:scale-95 transition-transform"
+            >
+              <CheckSquare className="w-3.5 h-3.5" /> Выбрать
+            </button>
+            <button
+              onClick={openDeleteAll}
+              className="flex items-center gap-1 text-xs font-bold text-destructive active:scale-95 transition-transform"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Удалить всё
+            </button>
+          </div>
+        )}
+
+        {/* New tab select mode */}
+        {activeTab === 'new' && visibleNotifs.length > 0 && !selectMode && (
+          <button
+            onClick={() => setSelectMode(true)}
+            className="flex items-center gap-1 text-xs font-bold text-ink-400 active:scale-95 transition-transform"
+          >
+            <CheckSquare className="w-3.5 h-3.5" /> Выбрать
+          </button>
+        )}
       </div>
+
+      {/* Select all bar */}
+      {selectMode && visibleNotifs.length > 0 && (
+        <div className="px-4 mb-3">
+          <button
+            onClick={toggleSelectAll}
+            className="flex items-center gap-2 text-xs font-bold text-ink-500 active:scale-95 transition-transform"
+          >
+            {allSelected ? (
+              <CheckSquare className="w-4 h-4 text-brand-500" />
+            ) : (
+              <Square className="w-4 h-4 text-ink-300" />
+            )}
+            Выбрать все
+          </button>
+        </div>
+      )}
 
       {/* List */}
       <div className="px-4 space-y-2">
         {visibleNotifs.map(n => {
           const Icon = ICON_MAP[n.source];
           const color = COLOR_MAP[n.source];
+          const isSelected = selectedIds.has(n.id);
           return (
             <div
               key={n.id}
               className={`flex items-start gap-3 p-4 rounded-2xl transition-all ${
+                isSelected ? 'bg-brand-50 ring-1 ring-brand-300' :
                 n.read ? 'bg-surface-50' : 'bg-surface-50 ring-1 ring-brand-200'
               }`}
             >
+              {/* Checkbox */}
+              {selectMode && (
+                <button
+                  onClick={() => toggleSelect(n.id)}
+                  className="mt-1 shrink-0"
+                >
+                  {isSelected ? (
+                    <CheckSquare className="w-5 h-5 text-brand-500" />
+                  ) : (
+                    <Square className="w-5 h-5 text-ink-300" />
+                  )}
+                </button>
+              )}
+
               <button
-                onClick={() => { markRead(n.id); navigate(n.link); }}
+                onClick={() => {
+                  if (selectMode) { toggleSelect(n.id); return; }
+                  markRead(n.id);
+                  navigate(n.link);
+                }}
                 className="flex items-start gap-3 flex-1 min-w-0 text-left"
               >
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5" style={{ backgroundColor: color + '15' }}>
@@ -143,24 +274,26 @@ export default function MamaNotificationsPage() {
               </button>
 
               {/* Actions */}
-              <div className="flex flex-col gap-1 shrink-0 mt-0.5">
-                {!n.archived && (
+              {!selectMode && (
+                <div className="flex flex-col gap-1 shrink-0 mt-0.5">
+                  {!n.archived && (
+                    <button
+                      onClick={() => archiveNotif(n.id)}
+                      className="p-1.5 rounded-lg hover:bg-surface-200 transition-colors"
+                      title="В архив"
+                    >
+                      <Archive className="w-3.5 h-3.5 text-ink-300" />
+                    </button>
+                  )}
                   <button
-                    onClick={() => archiveNotif(n.id)}
-                    className="p-1.5 rounded-lg hover:bg-surface-200 transition-colors"
-                    title="В архив"
+                    onClick={() => openDeleteSingle(n.id)}
+                    className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
+                    title="Удалить"
                   >
-                    <Archive className="w-3.5 h-3.5 text-ink-300" />
+                    <Trash2 className="w-3.5 h-3.5 text-ink-300" />
                   </button>
-                )}
-                <button
-                  onClick={() => setDeleteTarget(n.id)}
-                  className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
-                  title="Удалить"
-                >
-                  <Trash2 className="w-3.5 h-3.5 text-ink-300" />
-                </button>
-              </div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -183,10 +316,10 @@ export default function MamaNotificationsPage() {
       </div>
 
       {/* Delete confirmation dialog */}
-      <Dialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+      <Dialog open={deleteMode !== null} onOpenChange={(open) => { if (!open) { setDeleteMode(null); setDeleteTargetId(null); } }}>
         <DialogContent className="sm:max-w-xs rounded-3xl text-center">
           <DialogHeader>
-            <DialogTitle className="text-center">Удалить уведомление?</DialogTitle>
+            <DialogTitle className="text-center">{deleteDialogTitle}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-ink-400 -mt-2">Это действие нельзя отменить.</p>
           <DialogFooter className="flex-row justify-center gap-3 pt-2">
