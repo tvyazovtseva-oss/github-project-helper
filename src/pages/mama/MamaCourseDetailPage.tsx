@@ -89,7 +89,7 @@ const COURSES_DATA: Record<string, {
     ],
   },
   club_main: {
-    name: 'Клуб Anna MAMA',
+    name: 'Клуб Аннамама',
     color: '#FF2D55',
     description: 'Сообщество мам с доступом к экспертам, вебинарам и эксклюзивным материалам.',
     author: 'Анна Петрова',

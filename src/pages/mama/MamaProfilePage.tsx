@@ -19,7 +19,7 @@ const NOTIFICATION_SETTINGS = [
 ];
 
 const SUBSCRIPTIONS = [
-  { id: 'club_main', name: 'Клуб Anna MAMA', status: 'active' as const, expires: '24.04.2026', price: '2 990 ₽/мес', color: '#FF2D55' },
+  { id: 'club_main', name: 'Клуб Аннамама', status: 'active' as const, expires: '24.04.2026', price: '2 990 ₽/мес', color: '#FF2D55' },
   { id: 'club_woman', name: 'Женская Среда', status: 'active' as const, expires: '12.05.2026', price: '1 990 ₽/мес', color: '#AF52DE' },
   { id: 'course_first_aid', name: 'Первая Помощь', status: 'lifetime' as const, expires: '', price: 'Навсегда', color: '#FF9500' },
   { id: 'course_sleep', name: 'Сон малыша', status: 'active' as const, expires: '01.03.2026', price: '4 990 ₽', color: '#5856D6' },
