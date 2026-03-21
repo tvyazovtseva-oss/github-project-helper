@@ -266,42 +266,12 @@ export default function MamaCourseDetailPage() {
     loadRooms();
   }, [id, course?.isClub]);
 
-  if (!course) {
-    return (
-      <div className="p-8 text-center animate-fade-in">
-        <p className="text-ink-400 font-bold">Продукт не найден</p>
-        <button onClick={() => navigate(-1)} className="mt-4 text-brand-500 font-bold text-sm">← Назад</button>
-      </div>
-    );
-  }
-
-  const totalLessons = course.modules.reduce((s, m) => s + m.lessons.length, 0);
-  const completedLessons = course.modules.reduce((s, m) => s + m.lessons.filter(l => l.completed).length, 0);
-
-  const handleSendChat = () => {
-    if (!chatInput.trim()) return;
-    const newMsg: ChatMessage = {
-      id: Date.now().toString(),
-      text: chatInput.trim(),
-      sender: 'Вы',
-      senderRole: 'user',
-      time: new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' }),
-    };
-    setChatMessages(prev => [...prev, newMsg]);
-    setChatInput('');
-    setTimeout(() => {
-      setChatMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        text: 'Спасибо за вопрос! Отвечу в ближайшее время.',
-        sender: 'Эксперт',
-        senderRole: 'expert',
-        time: new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' }),
-      }]);
-    }, 1500);
-  };
+  const totalLessons = course ? course.modules.reduce((s, m) => s + m.lessons.length, 0) : 0;
+  const completedLessons = course ? course.modules.reduce((s, m) => s + m.lessons.filter(l => l.completed).length, 0) : 0;
 
   // Forum filtering and sorting
   const filteredThreads = useMemo(() => {
+    if (!course) return [];
     let threads = [...(course.forumThreads || [])];
     if (forumSearch) {
       const q = forumSearch.toLowerCase();
@@ -310,9 +280,8 @@ export default function MamaCourseDetailPage() {
     if (forumSort === 'popular') {
       threads.sort((a, b) => b.replies - a.replies);
     }
-    // 'recent' keeps original order (already sorted by lastActivity)
     return threads;
-  }, [course.forumThreads, forumSearch, forumSort]);
+  }, [course?.forumThreads, forumSearch, forumSort]);
 
   const filteredChatMessages = useMemo(() => {
     if (!chatSearch) return chatMessages;
@@ -321,6 +290,15 @@ export default function MamaCourseDetailPage() {
   }, [chatMessages, chatSearch]);
 
   const FORUM_TAGS = ['Общее', 'Питание', 'Сон', 'Психология', 'Здоровье', 'Развитие'];
+
+  if (!course) {
+    return (
+      <div className="p-8 text-center animate-fade-in">
+        <p className="text-ink-400 font-bold">Продукт не найден</p>
+        <button onClick={() => navigate(-1)} className="mt-4 text-brand-500 font-bold text-sm">← Назад</button>
+      </div>
+    );
+  }
 
   // ─── CLUB VIEW ─────────────────────────────────────────────────────
   if (course.isClub) {
