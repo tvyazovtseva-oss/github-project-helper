@@ -414,7 +414,7 @@ export default function MamaProfilePage() {
                     <span className="text-xs font-bold text-ink-500">{sub.price}</span>
                     <p className="text-[10px] text-ink-300">Оплачено: {sub.paidDate}</p>
                   </div>
-                  {(sub.status === 'active' || sub.status === 'expired') && sub.status !== 'lifetime' && (
+                  {sub.status !== 'lifetime' && (
                     <button className="text-xs font-bold text-brand-500 active:scale-95 transition-transform">
                       Продлить →
                     </button>
