@@ -20,6 +20,7 @@ import {
   getSubtopicsForTopics, getAgeTagForMonths, filterContent,
   type ContentItem, type Difficulty, type ContentTag,
 } from '@/lib/contentData';
+import { supabase } from '@/integrations/supabase/client';
 
 const FEED_ITEMS = [
   { id: 1, title: 'Вебинар: Первый прикорм', desc: 'Прямой эфир с педиатром. Завтра в 19:00', tag: 'Скоро', color: '#FF9500', source: 'Клуб Аннамама', link: '/mama/courses/club_main', read: false },
@@ -28,17 +29,37 @@ const FEED_ITEMS = [
   { id: 4, title: 'Урок 5 доступен', desc: 'Курс «Сон малыша» — новый модуль открыт', tag: 'Курс', color: '#5856D6', source: 'Сон малыша', link: '/mama/courses/course_sleep', read: false },
 ];
 
-const ACTIVE_PRODUCTS = [
-  { id: 'club_main', name: 'Клуб Аннамама', type: 'subscription' as const, color: '#FF2D55', expires: '24.04.2026', icon: Users },
-  { id: 'club_woman', name: 'Женская Среда', type: 'subscription' as const, color: '#AF52DE', expires: '12.05.2026', icon: Users },
-  { id: 'course_first_aid', name: 'Первая Помощь', type: 'course' as const, color: '#FF9500', progress: 65, icon: GraduationCap },
-  { id: 'course_sleep', name: 'Сон малыша', type: 'course' as const, color: '#5856D6', progress: 30, icon: GraduationCap },
+interface ActiveProduct {
+  id: string;
+  name: string;
+  type: 'subscription' | 'course';
+  color: string;
+  expiresAt: string;
+  progress?: number;
+  materialsCompleted?: number;
+  materialsTotal?: number;
+  icon: typeof Users;
+}
+
+const ACTIVE_PRODUCTS: ActiveProduct[] = [
+  { id: 'club_main', name: 'Клуб Аннамама', type: 'subscription', color: '#FF2D55', expiresAt: '2026-04-24T23:59:00', materialsCompleted: 28, materialsTotal: 45, icon: Users },
+  { id: 'club_woman', name: 'Женская Среда', type: 'subscription', color: '#AF52DE', expiresAt: '2026-05-12T23:59:00', materialsCompleted: 9, materialsTotal: 22, icon: Users },
+  { id: 'course_first_aid', name: 'Первая Помощь', type: 'course', color: '#FF9500', expiresAt: '2027-12-31T23:59:00', progress: 65, icon: GraduationCap },
+  { id: 'course_sleep', name: 'Сон малыша', type: 'course', color: '#5856D6', expiresAt: '2025-03-01T23:59:00', progress: 30, icon: GraduationCap },
 ];
+
+function isExpired(iso: string): boolean {
+  return new Date(iso).getTime() < Date.now();
+}
+
+function formatExpiry(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
 
 // Check if user has Club subscription (mock)
 const HAS_CLUB = true;
-// Mock child age in months (from profile)
-const CHILD_AGE_MONTHS = 14; // ~1 year 2 months
+const CHILD_AGE_MONTHS = 14;
 
 const CONTENT_ICONS = {
   video: Play,
@@ -49,7 +70,7 @@ const CONTENT_ICONS = {
 };
 
 interface QuestionnaireState {
-  step: number; // 1=topics, 2=subtopics, 3=params
+  step: number;
   selectedTopics: string[];
   selectedSubtopics: string[];
   materialsCount: number;
@@ -61,38 +82,23 @@ export default function MamaHomePage() {
   const navigate = useNavigate();
   const [feed, setFeed] = useState(FEED_ITEMS);
 
-  // Questionnaire state
   const [showQuestionnaire, setShowQuestionnaire] = useState(false);
   const [q, setQ] = useState<QuestionnaireState>({
-    step: 1,
-    selectedTopics: [],
-    selectedSubtopics: [],
-    materialsCount: 5,
-    difficulty: 'beginner',
+    step: 1, selectedTopics: [], selectedSubtopics: [], materialsCount: 5, difficulty: 'beginner',
   });
   const [weeklyPlan, setWeeklyPlan] = useState<ContentItem[] | null>(null);
   const [contentGap, setContentGap] = useState<string | null>(null);
 
-  const availableSubtopics = useMemo(() =>
-    getSubtopicsForTopics(q.selectedTopics),
-    [q.selectedTopics]
-  );
+  const availableSubtopics = useMemo(() => getSubtopicsForTopics(q.selectedTopics), [q.selectedTopics]);
 
-  const hideFeedItem = (id: number) => {
-    setFeed(prev => prev.filter(i => i.id !== id));
-  };
-
-  const markRead = (id: number) => {
-    setFeed(prev => prev.map(i => i.id === id ? { ...i, read: true } : i));
-  };
+  const hideFeedItem = (id: number) => setFeed(prev => prev.filter(i => i.id !== id));
+  const markRead = (id: number) => setFeed(prev => prev.map(i => i.id === id ? { ...i, read: true } : i));
 
   const toggleTopic = (id: string) => {
     setQ(prev => {
       const selected = prev.selectedTopics.includes(id)
         ? prev.selectedTopics.filter(t => t !== id)
-        : prev.selectedTopics.length < 3
-          ? [...prev.selectedTopics, id]
-          : prev.selectedTopics;
+        : prev.selectedTopics.length < 3 ? [...prev.selectedTopics, id] : prev.selectedTopics;
       return { ...prev, selectedTopics: selected };
     });
   };
@@ -106,7 +112,7 @@ export default function MamaHomePage() {
     }));
   };
 
-  const generatePlan = () => {
+  const generatePlan = async () => {
     const ageTag = getAgeTagForMonths(CHILD_AGE_MONTHS);
     const results = filterContent(CONTENT_LIBRARY, {
       topics: q.selectedTopics,
@@ -118,13 +124,17 @@ export default function MamaHomePage() {
 
     if (results.length < q.materialsCount) {
       setContentGap(`Найдено ${results.length} из ${q.materialsCount} запрошенных материалов`);
-      // In production: send alert to admin content factory
-      console.log('[ContentGap Alert]', {
-        topics: q.selectedTopics,
-        subtopics: q.selectedSubtopics,
-        available: results.length,
-        requested: q.materialsCount,
-      });
+      // Log content gap alert to DB
+      try {
+        await supabase.from('content_gap_alerts').insert({
+          user_id: user?.id || null,
+          requested_topics: { topics: q.selectedTopics, subtopics: q.selectedSubtopics, ageTag, difficulty: q.difficulty },
+          available_count: results.length,
+          requested_count: q.materialsCount,
+        } as any);
+      } catch (e) {
+        console.log('[ContentGap Alert] logged locally', e);
+      }
     } else {
       setContentGap(null);
     }
@@ -159,7 +169,7 @@ export default function MamaHomePage() {
         <Heart className="absolute -right-4 -bottom-4 w-32 h-32 text-white/10" />
       </div>
 
-      {/* Club Questionnaire CTA (only for Club subscribers) */}
+      {/* Club Questionnaire CTA */}
       {HAS_CLUB && !weeklyPlan && (
         <div className="mx-4 mt-4">
           <button
@@ -183,11 +193,8 @@ export default function MamaHomePage() {
         <div className="mx-4 mt-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-lg font-bold text-ink-900">📋 Ваш план на неделю</h3>
-            <button onClick={resetQuestionnaire} className="text-xs font-bold text-brand-500">
-              Изменить →
-            </button>
+            <button onClick={resetQuestionnaire} className="text-xs font-bold text-brand-500">Изменить →</button>
           </div>
-
           {contentGap && (
             <div className="p-3 bg-amber-50 rounded-2xl flex items-start gap-2.5 mb-3">
               <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
@@ -197,15 +204,12 @@ export default function MamaHomePage() {
               </div>
             </div>
           )}
-
           <div className="space-y-2">
             {weeklyPlan.map((item, idx) => {
               const Icon = CONTENT_ICONS[item.type];
               return (
                 <div key={item.id} className="flex items-center gap-3 p-3.5 bg-surface-50 rounded-2xl active:scale-[0.98] transition-transform cursor-pointer">
-                  <div className="w-8 h-8 rounded-lg bg-brand-100 flex items-center justify-center shrink-0 text-[10px] font-bold text-brand-500">
-                    {idx + 1}
-                  </div>
+                  <div className="w-8 h-8 rounded-lg bg-brand-100 flex items-center justify-center shrink-0 text-[10px] font-bold text-brand-500">{idx + 1}</div>
                   <div className="w-9 h-9 rounded-xl bg-surface-100 flex items-center justify-center shrink-0">
                     <Icon className="w-4 h-4 text-ink-400" />
                   </div>
@@ -221,7 +225,6 @@ export default function MamaHomePage() {
               );
             })}
           </div>
-
           {weeklyPlan.length === 0 && (
             <div className="p-6 bg-surface-50 rounded-2xl text-center">
               <AlertTriangle className="w-8 h-8 text-ink-200 mx-auto mb-2" />
@@ -236,33 +239,45 @@ export default function MamaHomePage() {
       <div className="mt-6 px-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-bold text-ink-900">Мои продукты</h3>
-          <button onClick={() => navigate('/mama/courses')} className="text-xs font-bold text-brand-500">
-            Все →
-          </button>
+          <button onClick={() => navigate('/mama/courses')} className="text-xs font-bold text-brand-500">Все →</button>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-1">
-          {ACTIVE_PRODUCTS.map(p => (
-            <button
-              key={p.id}
-              onClick={() => navigate(`/mama/courses/${p.id}`)}
-              className="p-4 bg-surface-50 rounded-2xl active:scale-[0.96] transition-transform text-left"
-            >
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: p.color + '15' }}>
-                <p.icon className="w-4 h-4" style={{ color: p.color }} />
-              </div>
-              <p className="text-xs font-bold text-ink-900 truncate">{p.name}</p>
-              {p.type === 'subscription' ? (
-                <p className="text-[10px] text-ink-400 mt-1">до {p.expires}</p>
-              ) : (
-                <div className="mt-2">
-                  <div className="w-full h-1.5 bg-surface-200 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${p.progress}%`, backgroundColor: p.color }} />
-                  </div>
-                  <p className="text-[10px] text-ink-400 mt-1">{p.progress}%</p>
+          {ACTIVE_PRODUCTS.map(p => {
+            const expired = isExpired(p.expiresAt);
+            return (
+              <button
+                key={p.id}
+                onClick={() => navigate(`/mama/courses/${p.id}`)}
+                className={`p-4 bg-surface-50 rounded-2xl active:scale-[0.96] transition-transform text-left ${expired ? 'opacity-50 grayscale' : ''}`}
+              >
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: p.color + '15' }}>
+                  <p.icon className="w-4 h-4" style={{ color: p.color }} />
                 </div>
-              )}
-            </button>
-          ))}
+                <p className="text-xs font-bold text-ink-900 truncate">{p.name}</p>
+                {expired && <p className="text-[9px] font-bold text-red-500 mt-0.5">Не активен</p>}
+                {p.type === 'subscription' ? (
+                  <div>
+                    {p.materialsTotal && (
+                      <div className="mt-2">
+                        <div className="w-full h-1.5 bg-surface-200 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${((p.materialsCompleted || 0) / p.materialsTotal) * 100}%`, backgroundColor: p.color }} />
+                        </div>
+                        <p className="text-[10px] text-ink-400 mt-1">{p.materialsCompleted}/{p.materialsTotal}</p>
+                      </div>
+                    )}
+                    {!expired && <p className="text-[10px] text-ink-400 mt-1">до {formatExpiry(p.expiresAt)}</p>}
+                  </div>
+                ) : (
+                  <div className="mt-2">
+                    <div className="w-full h-1.5 bg-surface-200 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${p.progress}%`, backgroundColor: p.color }} />
+                    </div>
+                    <p className="text-[10px] text-ink-400 mt-1">{p.progress}%</p>
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -270,9 +285,7 @@ export default function MamaHomePage() {
       <div className="mt-6 px-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-bold text-ink-900">Обновления</h3>
-          <button onClick={() => navigate('/mama/notifications')} className="text-xs font-bold text-brand-500">
-            Все →
-          </button>
+          <button onClick={() => navigate('/mama/notifications')} className="text-xs font-bold text-brand-500">Все →</button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {feed.map(item => (
@@ -283,15 +296,10 @@ export default function MamaHomePage() {
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: item.color }}>
-                    {item.tag}
-                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: item.color }}>{item.tag}</span>
                   <span className="text-[10px] text-ink-300">{item.source}</span>
                 </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); hideFeedItem(item.id); }}
-                  className="p-1 rounded-full hover:bg-surface-200 transition-colors"
-                >
+                <button onClick={(e) => { e.stopPropagation(); hideFeedItem(item.id); }} className="p-1 rounded-full hover:bg-surface-200 transition-colors">
                   <EyeOff className="w-3.5 h-3.5 text-ink-200" />
                 </button>
               </div>
@@ -302,7 +310,7 @@ export default function MamaHomePage() {
         </div>
       </div>
 
-      {/* ─── Questionnaire Dialog ──────────────────────────────── */}
+      {/* Questionnaire Dialog */}
       <Dialog open={showQuestionnaire} onOpenChange={setShowQuestionnaire}>
         <DialogContent className="sm:max-w-md rounded-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -311,18 +319,12 @@ export default function MamaHomePage() {
               Индивидуальный план
             </DialogTitle>
           </DialogHeader>
-
-          {/* Step indicator */}
           <div className="flex gap-1.5 mb-2">
             {[1, 2, 3].map(s => (
-              <div
-                key={s}
-                className={`h-1 flex-1 rounded-full transition-all ${s <= q.step ? 'bg-brand-500' : 'bg-surface-200'}`}
-              />
+              <div key={s} className={`h-1 flex-1 rounded-full transition-all ${s <= q.step ? 'bg-brand-500' : 'bg-surface-200'}`} />
             ))}
           </div>
 
-          {/* Step 1: Topics */}
           {q.step === 1 && (
             <div className="space-y-3 animate-fade-in">
               <p className="text-sm text-ink-500">Выберите 2–3 темы на эту неделю</p>
@@ -332,9 +334,7 @@ export default function MamaHomePage() {
                     key={t.id}
                     onClick={() => toggleTopic(t.id)}
                     className={`p-3 rounded-xl text-sm font-bold transition-all text-left ${
-                      q.selectedTopics.includes(t.id)
-                        ? 'bg-brand-500 text-white shadow-sm'
-                        : 'bg-surface-50 text-ink-700 active:scale-95'
+                      q.selectedTopics.includes(t.id) ? 'bg-brand-500 text-white shadow-sm' : 'bg-surface-50 text-ink-700 active:scale-95'
                     }`}
                   >
                     <span className="flex items-center gap-2">
@@ -356,7 +356,6 @@ export default function MamaHomePage() {
             </div>
           )}
 
-          {/* Step 2: Subtopics */}
           {q.step === 2 && (
             <div className="space-y-3 animate-fade-in">
               <p className="text-sm text-ink-500">Уточните подтемы (необязательно)</p>
@@ -366,9 +365,7 @@ export default function MamaHomePage() {
                     key={s.id}
                     onClick={() => toggleSubtopic(s.id)}
                     className={`w-full p-3 rounded-xl text-sm font-medium transition-all text-left flex items-center justify-between ${
-                      q.selectedSubtopics.includes(s.id)
-                        ? 'bg-brand-50 text-brand-600 ring-1 ring-brand-200'
-                        : 'bg-surface-50 text-ink-700'
+                      q.selectedSubtopics.includes(s.id) ? 'bg-brand-50 text-brand-600 ring-1 ring-brand-200' : 'bg-surface-50 text-ink-700'
                     }`}
                   >
                     <span>{s.label}</span>
@@ -380,20 +377,12 @@ export default function MamaHomePage() {
                 )}
               </div>
               <DialogFooter className="flex gap-2">
-                <button onClick={() => setQ(prev => ({ ...prev, step: 1 }))} className="flex-1 py-3 text-sm font-bold text-ink-400 rounded-xl">
-                  Назад
-                </button>
-                <button
-                  onClick={() => setQ(prev => ({ ...prev, step: 3 }))}
-                  className="flex-1 py-3 bg-ink-900 text-white text-sm font-bold rounded-xl active:scale-95 transition-transform"
-                >
-                  Далее
-                </button>
+                <button onClick={() => setQ(prev => ({ ...prev, step: 1 }))} className="flex-1 py-3 text-sm font-bold text-ink-400 rounded-xl">Назад</button>
+                <button onClick={() => setQ(prev => ({ ...prev, step: 3 }))} className="flex-1 py-3 bg-ink-900 text-white text-sm font-bold rounded-xl active:scale-95 transition-transform">Далее</button>
               </DialogFooter>
             </div>
           )}
 
-          {/* Step 3: Params */}
           {q.step === 3 && (
             <div className="space-y-4 animate-fade-in">
               <div>
@@ -402,7 +391,6 @@ export default function MamaHomePage() {
                   {AGE_TAGS.find(a => a.id === getAgeTagForMonths(CHILD_AGE_MONTHS))?.label || '—'}
                 </div>
               </div>
-
               <div>
                 <p className="text-xs font-bold text-ink-500 mb-2">Количество материалов</p>
                 <div className="flex gap-2">
@@ -410,16 +398,13 @@ export default function MamaHomePage() {
                     <button
                       key={n}
                       onClick={() => setQ(prev => ({ ...prev, materialsCount: n }))}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                        q.materialsCount === n ? 'bg-ink-900 text-white' : 'bg-surface-50 text-ink-500'
-                      }`}
+                      className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${q.materialsCount === n ? 'bg-ink-900 text-white' : 'bg-surface-50 text-ink-500'}`}
                     >
                       {n}
                     </button>
                   ))}
                 </div>
               </div>
-
               <div>
                 <p className="text-xs font-bold text-ink-500 mb-2">Сложность</p>
                 <div className="flex gap-2">
@@ -427,24 +412,16 @@ export default function MamaHomePage() {
                     <button
                       key={d}
                       onClick={() => setQ(prev => ({ ...prev, difficulty: d }))}
-                      className={`flex-1 py-2.5 rounded-xl text-[11px] font-bold transition-all ${
-                        q.difficulty === d ? 'bg-ink-900 text-white' : 'bg-surface-50 text-ink-500'
-                      }`}
+                      className={`flex-1 py-2.5 rounded-xl text-[11px] font-bold transition-all ${q.difficulty === d ? 'bg-ink-900 text-white' : 'bg-surface-50 text-ink-500'}`}
                     >
                       {DIFFICULTY_LABELS[d]}
                     </button>
                   ))}
                 </div>
               </div>
-
               <DialogFooter className="flex gap-2">
-                <button onClick={() => setQ(prev => ({ ...prev, step: 2 }))} className="flex-1 py-3 text-sm font-bold text-ink-400 rounded-xl">
-                  Назад
-                </button>
-                <button
-                  onClick={generatePlan}
-                  className="flex-1 py-3 bg-brand-500 text-white text-sm font-bold rounded-xl active:scale-95 transition-transform"
-                >
+                <button onClick={() => setQ(prev => ({ ...prev, step: 2 }))} className="flex-1 py-3 text-sm font-bold text-ink-400 rounded-xl">Назад</button>
+                <button onClick={generatePlan} className="flex-1 py-3 bg-brand-500 text-white text-sm font-bold rounded-xl active:scale-95 transition-transform">
                   Получить план ✨
                 </button>
               </DialogFooter>

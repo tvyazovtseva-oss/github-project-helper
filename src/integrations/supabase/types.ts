@@ -14,7 +14,255 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      chat_messages: {
+        Row: {
+          created_at: string
+          id: string
+          room_id: string
+          text: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          room_id: string
+          text: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          room_id?: string
+          text?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "expert_chat_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_gap_alerts: {
+        Row: {
+          available_count: number
+          created_at: string
+          id: string
+          requested_count: number
+          requested_topics: Json
+          user_id: string | null
+        }
+        Insert: {
+          available_count?: number
+          created_at?: string
+          id?: string
+          requested_count?: number
+          requested_topics?: Json
+          user_id?: string | null
+        }
+        Update: {
+          available_count?: number
+          created_at?: string
+          id?: string
+          requested_count?: number
+          requested_topics?: Json
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      content_item_tags: {
+        Row: {
+          content_item_id: string
+          id: string
+          tag_id: string
+        }
+        Insert: {
+          content_item_id: string
+          id?: string
+          tag_id: string
+        }
+        Update: {
+          content_item_id?: string
+          id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_item_tags_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_item_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "content_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_items: {
+        Row: {
+          club_only: boolean
+          created_at: string
+          description: string
+          difficulty: Database["public"]["Enums"]["difficulty_level"]
+          duration: string | null
+          file_size: string | null
+          id: string
+          product_id: string | null
+          thumbnail_url: string | null
+          title: string
+          type: Database["public"]["Enums"]["content_type"]
+        }
+        Insert: {
+          club_only?: boolean
+          created_at?: string
+          description?: string
+          difficulty?: Database["public"]["Enums"]["difficulty_level"]
+          duration?: string | null
+          file_size?: string | null
+          id?: string
+          product_id?: string | null
+          thumbnail_url?: string | null
+          title: string
+          type: Database["public"]["Enums"]["content_type"]
+        }
+        Update: {
+          club_only?: boolean
+          created_at?: string
+          description?: string
+          difficulty?: Database["public"]["Enums"]["difficulty_level"]
+          duration?: string | null
+          file_size?: string | null
+          id?: string
+          product_id?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["content_type"]
+        }
+        Relationships: []
+      }
+      content_tags: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          parent_id: string | null
+          type: Database["public"]["Enums"]["tag_type"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          parent_id?: string | null
+          type: Database["public"]["Enums"]["tag_type"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          parent_id?: string | null
+          type?: Database["public"]["Enums"]["tag_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_tags_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "content_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expert_chat_rooms: {
+        Row: {
+          category: string
+          club_product_id: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          category: string
+          club_product_id: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          category?: string
+          club_product_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      forum_replies: {
+        Row: {
+          created_at: string
+          id: string
+          text: string
+          thread_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          text: string
+          thread_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          text?: string
+          thread_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_replies_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "forum_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_threads: {
+        Row: {
+          author_user_id: string
+          club_product_id: string
+          created_at: string
+          id: string
+          tag: string
+          title: string
+        }
+        Insert: {
+          author_user_id: string
+          club_product_id: string
+          created_at?: string
+          id?: string
+          tag?: string
+          title: string
+        }
+        Update: {
+          author_user_id?: string
+          club_product_id?: string
+          created_at?: string
+          id?: string
+          tag?: string
+          title?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +271,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      content_type: "video" | "audio" | "pdf" | "guide" | "checklist"
+      difficulty_level: "beginner" | "intermediate" | "advanced"
+      tag_type: "age" | "topic" | "subtopic"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +400,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      content_type: ["video", "audio", "pdf", "guide", "checklist"],
+      difficulty_level: ["beginner", "intermediate", "advanced"],
+      tag_type: ["age", "topic", "subtopic"],
+    },
   },
 } as const
