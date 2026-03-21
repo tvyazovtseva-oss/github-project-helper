@@ -30,7 +30,7 @@ const INITIAL_NOTIFICATIONS: Notification[] = [
   { id: 1, title: 'Новый вебинар через час', desc: 'Подключайтесь к прямому эфиру с педиатром', time: 'Только что', read: false, source: 'course', link: '/mama/courses/club_main' },
   { id: 2, title: 'План вакцинации обновлен', desc: 'Добавлена дата прививки «Пентаксим»', time: '2 часа назад', read: false, source: 'health', link: '/mama/health' },
   { id: 3, title: 'Новый гайд: Сон без слёз', desc: 'Авторская методика в библиотеке', time: 'Вчера', read: false, source: 'library', link: '/mama/library' },
-  { id: 4, title: 'Подписка истекает', desc: 'Клуб Anna MAMA — осталось 3 дня', time: '3 дня назад', read: true, source: 'payment', link: '/mama/profile' },
+  { id: 4, title: 'Подписка истекает', desc: 'Клуб Аннамама — осталось 3 дня', time: '3 дня назад', read: true, source: 'payment', link: '/mama/profile' },
   { id: 5, title: 'Урок 5 доступен', desc: 'Курс «Сон малыша» — новый модуль', time: '4 дня назад', read: true, source: 'course', link: '/mama/courses/course_sleep' },
   { id: 6, title: 'Чекап: Стоматолог', desc: 'Рекомендован осмотр в 12 месяцев', time: '5 дней назад', read: true, source: 'health', link: '/mama/health' },
 ];

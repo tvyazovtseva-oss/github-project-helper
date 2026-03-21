@@ -10,7 +10,7 @@ interface NotificationStep {
 }
 
 const INITIAL_CHAIN: NotificationStep[] = [
-  { id: '1', delay: '0 мин', channel: 'push', title: 'Добро пожаловать!', message: 'Спасибо за регистрацию в Anna MAMA' },
+  { id: '1', delay: '0 мин', channel: 'push', title: 'Добро пожаловать!', message: 'Спасибо за регистрацию в Аннамама' },
   { id: '2', delay: '1 час', channel: 'email', title: 'Как начать?', message: 'Пройдите первый урок бесплатно' },
   { id: '3', delay: '1 день', channel: 'telegram', title: 'Не забудьте!', message: 'У вас есть 3 дня бесплатного доступа' },
   { id: '4', delay: '3 дня', channel: 'push', title: 'Скидка -20%', message: 'Специальное предложение истекает сегодня' },

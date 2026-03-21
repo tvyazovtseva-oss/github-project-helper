@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 const PRODUCTS = [
-  { id: 'club', name: 'Клуб Anna MAMA', color: '#f43f5e', icon: Heart },
+  { id: 'club', name: 'Клуб Аннамама', color: '#f43f5e', icon: Heart },
   { id: 'sleep', name: 'Курс: Сон малыша', color: '#6366f1', icon: Clock },
   { id: 'prikorm', name: 'Курс: Первый прикорм', color: '#10b981', icon: Star },
 ];

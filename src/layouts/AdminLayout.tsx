@@ -55,8 +55,7 @@ export default function AdminLayout({ role = 'admin' }: AdminLayoutProps) {
       <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-72 bg-ink-900 text-white flex flex-col transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Heart className="w-6 h-6 text-brand-500 fill-brand-500" />
-            <span className="text-xl font-bold">Anna MAMA</span>
+            <span className="text-xl font-bold text-brand-500">Аннамама</span>
             <span className="text-[10px] font-bold bg-white/10 px-2 py-0.5 rounded-full text-white/60">{config.badge}</span>
           </div>
           <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1 hover:bg-white/10 rounded-lg">

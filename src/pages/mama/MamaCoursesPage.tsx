@@ -14,7 +14,7 @@ interface Product {
 }
 
 const PRODUCTS: Product[] = [
-  { id: 'club_main', name: 'Клуб Anna MAMA', description: 'Сообщество мам с экспертами и вебинарами', color: '#FF2D55', type: 'subscription', expires: '24.04.2026' },
+  { id: 'club_main', name: 'Клуб Аннамама', description: 'Сообщество мам с экспертами и вебинарами', color: '#FF2D55', type: 'subscription', expires: '24.04.2026' },
   { id: 'club_woman', name: 'Женская Среда', description: 'Женское здоровье и психология', color: '#AF52DE', type: 'subscription', expires: '12.05.2026' },
   { id: 'course_first_aid', name: 'Первая Помощь', description: 'Экстренная помощь ребёнку от 0 до 7 лет', color: '#FF9500', type: 'course', progress: 65, lessonsTotal: 20, lessonsCompleted: 13 },
   { id: 'course_sleep', name: 'Сон малыша', description: 'Методика здорового сна для ребёнка', color: '#5856D6', type: 'course', progress: 30, lessonsTotal: 16, lessonsCompleted: 5 },

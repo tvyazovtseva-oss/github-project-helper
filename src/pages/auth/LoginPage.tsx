@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Heart, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -21,26 +21,17 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result.success) {
-      // Redirect based on role will be handled by route guards
       navigate('/');
     } else {
       setError(result.error || 'Ошибка входа');
     }
   };
 
-  const quickLogin = async (email: string) => {
-    setLoading(true);
-    const result = await login(email, 'demo');
-    setLoading(false);
-    if (result.success) navigate('/');
-  };
-
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-white">
       <div className="w-full max-w-sm animate-fade-in">
         <div className="text-center mb-10">
-          <Heart className="w-12 h-12 text-brand-500 fill-brand-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-ink-900 mb-1">Anna MAMA</h1>
+          <h1 className="text-3xl font-bold text-brand-500 mb-2">Аннамама</h1>
           <p className="text-sm text-ink-400">Здоровье и развитие малыша</p>
         </div>
 
@@ -84,22 +75,6 @@ export default function LoginPage() {
           <Link to="/register" className="text-sm font-semibold text-brand-500">
             Создать аккаунт
           </Link>
-        </div>
-
-        {/* Quick demo access */}
-        <div className="mt-10 pt-6 border-t border-surface-200">
-          <p className="text-xs text-ink-300 text-center mb-3 font-medium">Демо-доступ</p>
-          <div className="grid grid-cols-3 gap-2">
-            <button onClick={() => quickLogin('demo@mama.ru')} className="px-3 py-2.5 bg-surface-50 rounded-xl text-xs font-bold text-ink-500 hover:bg-surface-100 transition-all active:scale-[0.97]">
-              👩 Мама
-            </button>
-            <button onClick={() => quickLogin('doctor@anna.ru')} className="px-3 py-2.5 bg-surface-50 rounded-xl text-xs font-bold text-ink-500 hover:bg-surface-100 transition-all active:scale-[0.97]">
-              🩺 Врач
-            </button>
-            <button onClick={() => quickLogin('admin@anna.ru')} className="px-3 py-2.5 bg-surface-50 rounded-xl text-xs font-bold text-ink-500 hover:bg-surface-100 transition-all active:scale-[0.97]">
-              ⚙️ Админ
-            </button>
-          </div>
         </div>
       </div>
     </div>

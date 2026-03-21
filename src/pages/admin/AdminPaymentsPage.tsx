@@ -11,7 +11,7 @@ export default function AdminPaymentsPage() {
 var widget = new cp.CloudPayments();
 widget.pay('charge', {
   publicId: '${publicId}',
-  description: 'Подписка Anna MAMA',
+  description: 'Подписка Аннамама',
   amount: 1900,
   currency: 'RUB',
   skin: 'mini'

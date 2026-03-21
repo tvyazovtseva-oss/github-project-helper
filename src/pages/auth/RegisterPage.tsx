@@ -1,7 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Heart } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -12,6 +17,16 @@ export default function RegisterPage() {
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    if (showWelcome) {
+      const timer = setTimeout(() => {
+        navigate('/mama');
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [showWelcome, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +38,7 @@ export default function RegisterPage() {
     setLoading(false);
 
     if (result.success) {
-      navigate('/mama');
+      setShowWelcome(true);
     } else {
       setError(result.error || 'Ошибка регистрации');
     }
@@ -33,9 +48,8 @@ export default function RegisterPage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-6 bg-white">
       <div className="w-full max-w-sm animate-fade-in">
         <div className="text-center mb-10">
-          <Heart className="w-12 h-12 text-brand-500 fill-brand-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-ink-900 mb-1">Регистрация</h1>
-          <p className="text-sm text-ink-400">Присоединяйтесь к Anna MAMA</p>
+          <h1 className="text-3xl font-bold text-brand-500 mb-2">Аннамама</h1>
+          <p className="text-sm text-ink-400">Присоединяйтесь к нам</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -95,6 +109,25 @@ export default function RegisterPage() {
           </Link>
         </div>
       </div>
+
+      {/* Welcome onboarding popup */}
+      <Dialog open={showWelcome} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-sm border-none shadow-2xl rounded-3xl text-center p-10 [&>button]:hidden">
+          <DialogTitle className="sr-only">Добро пожаловать</DialogTitle>
+          <div className="flex flex-col items-center gap-5 animate-scale-in">
+            <div className="w-20 h-20 rounded-full bg-brand-100 flex items-center justify-center animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]">
+              <Sparkles className="w-10 h-10 text-brand-500" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-ink-900 mb-2">Добро пожаловать!</h2>
+              <p className="text-sm text-ink-400 leading-relaxed">
+                Вы в экосистеме Аннамама.<br />
+                Впереди — всё для вас и малыша.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

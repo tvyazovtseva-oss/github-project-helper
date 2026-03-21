@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  Heart, Home, BookOpen, User, Bell, ChevronDown, X, Zap,
-  Users, GraduationCap, PlusCircle, Stethoscope
+  Home, BookOpen, User, Bell, X, Zap,
+  Users, GraduationCap, Stethoscope, LogOut
 } from 'lucide-react';
 
 interface Product {
@@ -16,7 +16,7 @@ interface Product {
 }
 
 const PRODUCTS: Product[] = [
-  { id: 'club_main', name: 'Клуб Anna MAMA', color: '#FF2D55', type: 'subscription', expires: '24.04.2026' },
+  { id: 'club_main', name: 'Клуб Аннамама', color: '#FF2D55', type: 'subscription', expires: '24.04.2026' },
   { id: 'club_woman', name: 'Женская Среда', color: '#AF52DE', type: 'subscription', expires: '12.05.2026' },
   { id: 'course_first_aid', name: 'Первая Помощь', color: '#FF9500', type: 'course', progress: 65 },
   { id: 'course_sleep', name: 'Сон малыша', color: '#5856D6', type: 'course', progress: 30 },
@@ -27,36 +27,31 @@ const NAV_ITEMS = [
   { to: '/mama/courses', icon: GraduationCap, label: 'Курсы' },
   { to: '/mama/health', icon: Stethoscope, label: 'Медкарта', isCenter: true },
   { to: '/mama/library', icon: BookOpen, label: 'Знания' },
-  { to: '/mama/profile', icon: User, label: 'Профиль' },
 ];
 
 export default function MamaLayout() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [activeProduct, setActiveProduct] = useState(PRODUCTS[0]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <div
       className="flex flex-col lg:flex-row h-screen bg-white relative"
       style={{ ['--product-color' as string]: activeProduct.color }}
     >
-      {/* Desktop sidebar — hidden on mobile */}
+      {/* Desktop sidebar */}
       <aside className="hidden lg:flex flex-col w-64 xl:w-72 border-r border-surface-200/50 bg-surface-50 shrink-0">
-        {/* Logo / product switcher */}
+        {/* Logo */}
         <div className="p-5 border-b border-surface-200/50">
-          <button onClick={() => setIsMenuOpen(true)} className="flex items-center gap-2 w-full">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: activeProduct.color + '15' }}>
-              <Heart className="w-4 h-4" style={{ color: activeProduct.color }} />
-            </div>
-            <div className="flex-1 text-left min-w-0">
-              <p className="text-sm font-bold text-ink-900 truncate">{activeProduct.name}</p>
-              <p className="text-[10px] text-ink-400">
-                {activeProduct.expires ? `до ${activeProduct.expires}` : `${activeProduct.progress}%`}
-              </p>
-            </div>
-            <ChevronDown className="w-3.5 h-3.5 text-ink-300 shrink-0" />
+          <button onClick={() => navigate('/mama')} className="flex items-center gap-2 w-full">
+            <span className="text-xl font-bold text-brand-500">Аннамама</span>
           </button>
         </div>
 
@@ -88,16 +83,28 @@ export default function MamaLayout() {
           ))}
         </nav>
 
-        {/* User info at bottom */}
+        {/* User footer */}
         <div className="p-4 border-t border-surface-200/50">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
-              <User className="w-4 h-4 text-brand-500" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-ink-900 truncate">{user?.full_name}</p>
-              <p className="text-[10px] text-ink-400 truncate">{user?.email}</p>
-            </div>
+            <button
+              onClick={() => navigate('/mama/profile')}
+              className="flex items-center gap-3 flex-1 min-w-0 rounded-xl p-1.5 -m-1.5 hover:bg-white/60 transition-colors"
+            >
+              <div className="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
+                <User className="w-4 h-4 text-brand-500" />
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-sm font-bold text-ink-900 truncate">{user?.full_name}</p>
+                <p className="text-[10px] text-ink-400 truncate">{user?.email}</p>
+              </div>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="p-2 rounded-xl text-ink-300 hover:text-ink-600 hover:bg-white/60 transition-colors shrink-0"
+              title="Выйти"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </aside>
@@ -106,11 +113,9 @@ export default function MamaLayout() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top header */}
         <header className="flex items-center justify-between px-4 lg:px-6 py-3 bg-white/80 glass sticky top-0 z-30 border-b border-surface-200/50">
-          {/* Mobile: product switcher */}
-          <button onClick={() => setIsMenuOpen(true)} className="flex items-center gap-1.5 lg:hidden">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: activeProduct.color }} />
-            <span className="text-sm font-bold text-ink-900">{activeProduct.name}</span>
-            <ChevronDown className="w-3 h-3 text-ink-400" />
+          {/* Mobile: brand */}
+          <button onClick={() => navigate('/mama')} className="flex items-center gap-1.5 lg:hidden">
+            <span className="text-lg font-bold text-brand-500">Аннамама</span>
           </button>
 
           {/* Desktop: page title */}
@@ -119,7 +124,7 @@ export default function MamaLayout() {
               {NAV_ITEMS.find(n => {
                 if (n.end) return location.pathname === n.to;
                 return location.pathname.startsWith(n.to);
-              })?.label || 'Anna MAMA'}
+              })?.label || 'Аннамама'}
             </h1>
           </div>
 
@@ -132,7 +137,7 @@ export default function MamaLayout() {
           </button>
         </header>
 
-        {/* Page content — constrained on very wide screens */}
+        {/* Page content */}
         <div className="flex-1 overflow-y-auto no-scrollbar">
           <div className="max-w-2xl mx-auto lg:py-2">
             <Outlet />
@@ -189,10 +194,7 @@ export default function MamaLayout() {
           <div className="absolute inset-0 bg-black/30" onClick={() => setIsMenuOpen(false)} />
           <div className="relative w-full max-w-md mx-auto bg-white rounded-t-3xl lg:rounded-3xl p-6 animate-slide-up max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <Heart className="w-5 h-5 text-brand-500 fill-brand-500" />
-                <span className="font-bold text-ink-900">Мои продукты</span>
-              </div>
+              <span className="font-bold text-ink-900">Мои продукты</span>
               <button onClick={() => setIsMenuOpen(false)} className="p-2 bg-surface-100 rounded-full">
                 <X className="w-4 h-4 text-ink-400" />
               </button>
@@ -219,10 +221,6 @@ export default function MamaLayout() {
                 </button>
               ))}
             </div>
-            <button className="w-full py-4 mt-4 bg-ink-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg">
-              <PlusCircle className="w-5 h-5" />
-              Новые продукты
-            </button>
           </div>
         </div>
       )}
