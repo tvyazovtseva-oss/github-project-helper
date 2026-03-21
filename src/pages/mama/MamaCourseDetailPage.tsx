@@ -291,6 +291,28 @@ export default function MamaCourseDetailPage() {
 
   const FORUM_TAGS = ['Общее', 'Питание', 'Сон', 'Психология', 'Здоровье', 'Развитие'];
 
+  const handleSendChat = () => {
+    if (!chatInput.trim()) return;
+    const newMsg: ChatMessage = {
+      id: Date.now().toString(),
+      text: chatInput.trim(),
+      sender: 'Вы',
+      senderRole: 'user',
+      time: new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' }),
+    };
+    setChatMessages(prev => [...prev, newMsg]);
+    setChatInput('');
+    setTimeout(() => {
+      setChatMessages(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        text: 'Спасибо за вопрос! Отвечу в ближайшее время.',
+        sender: 'Эксперт',
+        senderRole: 'expert',
+        time: new Date().toLocaleTimeString('ru', { hour: '2-digit', minute: '2-digit' }),
+      }]);
+    }, 1500);
+  };
+
   if (!course) {
     return (
       <div className="p-8 text-center animate-fade-in">
