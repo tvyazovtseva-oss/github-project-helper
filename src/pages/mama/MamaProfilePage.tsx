@@ -127,7 +127,7 @@ export default function MamaProfilePage() {
   }, [countrySearch, allCountries]);
 
   const citiesForCountry = useMemo<ICity[]>(() => {
-    try { return _City?.getCitiesOfCountry(selectedCountryCode) || []; } catch { return []; }
+    try { return City.getCitiesOfCountry(selectedCountryCode) || []; } catch { return []; }
   }, [selectedCountryCode]);
 
   const filteredCities = useMemo(() => {
