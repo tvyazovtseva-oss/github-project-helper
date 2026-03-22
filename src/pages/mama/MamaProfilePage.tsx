@@ -1,19 +1,7 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Country, City } from 'country-state-city';
 import type { ICountry, ICity } from 'country-state-city';
-
-let _Country: typeof import('country-state-city').Country | null = null;
-let _City: typeof import('country-state-city').City | null = null;
-let _cscLoadFailed = false;
-
-try {
-  const csc = require('country-state-city');
-  _Country = csc.Country;
-  _City = csc.City;
-} catch (e) {
-  console.error('[country-state-city] failed to load:', e);
-  _cscLoadFailed = true;
-}
 import {
   User, Baby, Edit3, Calendar, Settings, Bell, BellOff,
   CreditCard, Plus, Crown, Camera, Mail, Phone, MapPin,
