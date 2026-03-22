@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Country, City, ICountry, ICity } from 'country-state-city';
+import { Country, City } from 'country-state-city';
+import type { ICountry, ICity } from 'country-state-city';
 import {
   User, Baby, Edit3, Calendar, Settings, Bell, BellOff,
   CreditCard, Plus, Crown, Camera, Mail, Phone, MapPin,
@@ -113,7 +114,9 @@ export default function MamaProfilePage() {
   const [notifSettings, setNotifSettings] = useState(INITIAL_NOTIF_SETTINGS);
 
   // ─── Country/City from country-state-city ─────────────────────────
-  const allCountries = useMemo(() => Country.getAllCountries(), []);
+  const allCountries = useMemo<ICountry[]>(() => {
+    try { return Country.getAllCountries() || []; } catch { return []; }
+  }, []);
 
   const filteredCountries = useMemo(() => {
     if (!countrySearch) return allCountries.slice(0, 30);
@@ -123,10 +126,9 @@ export default function MamaProfilePage() {
     ).slice(0, 30);
   }, [countrySearch, allCountries]);
 
-  const citiesForCountry = useMemo(() =>
-    City.getCitiesOfCountry(selectedCountryCode) || [],
-    [selectedCountryCode]
-  );
+  const citiesForCountry = useMemo<ICity[]>(() => {
+    try { return City.getCitiesOfCountry(selectedCountryCode) || []; } catch { return []; }
+  }, [selectedCountryCode]);
 
   const filteredCities = useMemo(() => {
     if (!citySearch) return citiesForCountry.slice(0, 30);

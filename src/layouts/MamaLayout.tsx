@@ -43,7 +43,7 @@ export default function MamaLayout() {
 
   return (
     <div
-      className="flex flex-col lg:flex-row h-screen bg-white relative"
+      className="flex flex-col lg:flex-row h-dvh bg-white relative"
       style={{ ['--product-color' as string]: activeProduct.color }}
     >
       {/* Desktop sidebar */}

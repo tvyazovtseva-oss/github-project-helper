@@ -27,6 +27,19 @@ const DEMO_USERS: Record<string, AppUser> = {
   'admin@anna.ru': { id: '3', email: 'admin@anna.ru', full_name: 'Администратор', role: 'admin' },
 };
 
+function safeUUID(): string {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+  } catch {}
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = useCallback(async (name: string, email: string, _password: string) => {
     const newUser: AppUser = {
-      id: crypto.randomUUID(),
+      id: safeUUID(),
       email,
       full_name: name,
       role: 'mama',
