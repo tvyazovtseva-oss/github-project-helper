@@ -126,7 +126,9 @@ export default function MamaProfilePage() {
   const [notifSettings, setNotifSettings] = useState(INITIAL_NOTIF_SETTINGS);
 
   // ─── Country/City from country-state-city ─────────────────────────
-  const allCountries = useMemo(() => Country.getAllCountries(), []);
+  const allCountries = useMemo<ICountry[]>(() => {
+    try { return _Country?.getAllCountries() || []; } catch { return []; }
+  }, []);
 
   const filteredCountries = useMemo(() => {
     if (!countrySearch) return allCountries.slice(0, 30);
