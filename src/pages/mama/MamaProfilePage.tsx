@@ -138,10 +138,9 @@ export default function MamaProfilePage() {
     ).slice(0, 30);
   }, [countrySearch, allCountries]);
 
-  const citiesForCountry = useMemo(() =>
-    City.getCitiesOfCountry(selectedCountryCode) || [],
-    [selectedCountryCode]
-  );
+  const citiesForCountry = useMemo<ICity[]>(() => {
+    try { return _City?.getCitiesOfCountry(selectedCountryCode) || []; } catch { return []; }
+  }, [selectedCountryCode]);
 
   const filteredCities = useMemo(() => {
     if (!citySearch) return citiesForCountry.slice(0, 30);

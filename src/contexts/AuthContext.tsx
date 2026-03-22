@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = useCallback(async (name: string, email: string, _password: string) => {
     const newUser: AppUser = {
-      id: crypto.randomUUID(),
+      id: safeUUID(),
       email,
       full_name: name,
       role: 'mama',
