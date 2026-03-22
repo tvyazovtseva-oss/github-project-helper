@@ -115,7 +115,7 @@ export default function MamaProfilePage() {
 
   // ─── Country/City from country-state-city ─────────────────────────
   const allCountries = useMemo<ICountry[]>(() => {
-    try { return _Country?.getAllCountries() || []; } catch { return []; }
+    try { return Country.getAllCountries() || []; } catch { return []; }
   }, []);
 
   const filteredCountries = useMemo(() => {
